@@ -1,0 +1,235 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect FPL Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pitch: {
+                            900: '#0F121D',
+                            800: '#1A1D2E',
+                            700: '#252A3F',
+                        },
+                        neon: {
+                            green: '#3B82F6',
+                            glow: 'rgba(59, 130, 246, 0.15)',
+                        }
+                    },
+                    backgroundImage: {
+                        'pitch-mesh': 'radial-gradient(circle at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%)',
+                        'card-gradient': 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0F121D; color: #ffffff; }
+        ::-webkit-scrollbar { display: none; }
+        .glass-card {
+            background: rgba(26, 29, 46, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .neon-border {
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.05);
+        }
+        .neon-border-focus:focus-within {
+            border-color: #3B82F6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+        .neon-button {
+            background: #3B82F6;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        .neon-button:hover {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .glass-input {
+            background: rgba(15, 18, 29, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus-within {
+            border-color: #06B6D4;
+            background: rgba(15, 18, 29, 0.9);
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.2), inset 0 0 20px rgba(6, 182, 212, 0.08);
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-sans bg-grid relative overflow-x-hidden">
+
+    <!-- Ambient Glows -->
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
+    <div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[150px] -z-10 pointer-events-none"></div>
+
+    <!-- Header (Auth Focused - No Nav) -->
+    <header id="header" class="w-full px-8 py-6 flex justify-between items-center z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-futbol text-neon-green text-2xl"></i>
+            <span class="text-xl font-bold tracking-tight text-white">Predictive<span class="text-neon-green">FPL</span></span>
+        </div>
+        <div>
+            <a href="#" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Help & Support</a>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow flex flex-col items-center justify-center px-4 w-full max-w-7xl mx-auto z-10 py-12">
+        
+        <!-- Onboarding Container -->
+        <div class="w-full max-w-2xl glass-card rounded-[32px] p-8 md:p-10 neon-border flex flex-col relative" id="onboarding-container">
+            
+            <!-- Progress Indicator -->
+            <div class="flex justify-center items-center gap-2 mb-8" id="onboarding-header-progress">
+                <div class="w-12 h-1.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                <div class="w-12 h-1.5 rounded-full bg-pitch-700"></div>
+                <span class="text-xs font-semibold text-gray-400 ml-2 tracking-widest uppercase">Step 1/2</span>
+            </div>
+
+            <!-- Header Content -->
+            <div class="text-center mb-10">
+                <div class="w-16 h-16 mx-auto rounded-full bg-pitch-800 border border-blue-500/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
+                    <i class="fa-solid fa-shield-halved text-blue-400 text-2xl"></i>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-bold text-white mb-3">Direct FPL Secure Login</h1>
+                <p class="text-sm text-gray-400 leading-relaxed max-w-lg mx-auto">Secure connection via official Fantasy Premier League for real-time private team data</p>
+            </div>
+
+            <!-- Security Badge -->
+            <div class="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-2xl p-5 mb-8" id="security-badge">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                        <i class="fa-solid fa-lock text-cyan-400 text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                            <span>Encrypted & Secure</span>
+                            <i class="fa-solid fa-circle-check text-cyan-400 text-xs"></i>
+                        </h3>
+                        <p class="text-xs text-gray-300 leading-relaxed">We use encrypted session tokens to fetch your real-time private team data (bank balance, transfers, and scout info). Your credentials are never stored on our servers.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Direct FPL Login Section -->
+            <div class="bg-pitch-800/50 rounded-2xl p-8 border border-blue-500/20 mb-6" id="direct-login-section">
+
+                <!-- Login Form -->
+                <div class="space-y-6">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-envelope text-cyan-400 text-[10px]"></i>
+                            FPL Email Address
+                        </label>
+                        <div class="glass-input rounded-xl transition-all duration-300 group">
+                            <div class="flex items-center px-5 py-4">
+                                <i class="fa-solid fa-at text-gray-500 group-focus-within:text-cyan-400 transition-colors text-sm mr-3"></i>
+                                <input type="email" placeholder="your.email@example.com" class="w-full bg-transparent border-none text-white text-sm font-medium focus:outline-none placeholder-gray-600">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-key text-cyan-400 text-[10px]"></i>
+                            Password
+                        </label>
+                        <div class="glass-input rounded-xl transition-all duration-300 group">
+                            <div class="flex items-center px-5 py-4">
+                                <i class="fa-solid fa-lock text-gray-500 group-focus-within:text-cyan-400 transition-colors text-sm mr-3"></i>
+                                <input type="password" placeholder="Enter your FPL password" class="w-full bg-transparent border-none text-white text-sm font-medium focus:outline-none placeholder-gray-600">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="w-full neon-button rounded-xl py-4 px-6 font-bold text-base tracking-wide flex justify-center items-center gap-3 mt-6 relative overflow-hidden group">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Secure Connection via Official FPL</span>
+                        <div class="absolute right-4 flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full">
+                            <i class="fa-solid fa-check-double text-[10px]"></i>
+                            <span class="text-[10px] font-semibold uppercase tracking-wider">Encrypted</span>
+                        </div>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Alternative Option -->
+            <div class="bg-pitch-900/50 border border-gray-700/50 rounded-xl p-5" id="alternative-option">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-info-circle text-gray-500 text-sm mt-0.5"></i>
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-300 mb-1">Alternative: Use Team ID</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">Limited public view only (no private data)</p>
+                        </div>
+                    </div>
+                    <button type="button" class="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 text-xs font-semibold hover:bg-pitch-800 hover:text-white hover:border-gray-500 transition-all duration-300">
+                        Use Team ID
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Footer -->
+            <div class="flex gap-4 mt-8" id="onboarding-action-footer">
+                <button type="button" class="flex-1 py-4 px-6 rounded-xl border border-gray-600 text-gray-300 font-semibold text-sm hover:bg-pitch-800 hover:text-white transition-all duration-300">
+                    Back
+                </button>
+                <button type="button" onclick="window.top.location.href='/syncing'" class="flex-[2] bg-blue-600 hover:bg-blue-700 rounded-xl py-4 px-6 font-semibold text-sm text-white flex justify-center items-center gap-2 cursor-pointer">
+                    Next Step <i onclick="window.top.location.href='/syncing'" class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+            <!-- Skip Option -->
+            <div class="text-center mt-6">
+                <a href="#" onclick="window.top.location.href='/dashboard'; return false;" class="text-xs text-gray-500 hover:text-white transition-colors border-b border-transparent hover:border-gray-500 pb-0.5">Skip for now, I'll do this later</a>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer (Minimal for Auth) -->
+    <footer id="footer_auth" class="w-full border-t border-gray-800 bg-pitch-900/80 backdrop-blur-md py-8 mt-auto z-10">
+        <div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-futbol text-gray-500 text-lg"></i>
+                <span class="text-sm font-semibold text-gray-400">PredictiveFPL</span>
+            </div>
+            <div class="flex gap-6 text-sm text-gray-500">
+                <a href="#" class="hover:text-blue-400 transition-colors">Privacy</a>
+                <a href="#" class="hover:text-blue-400 transition-colors">Terms</a>
+                <a href="#" class="hover:text-blue-400 transition-colors">Contact</a>
+            </div>
+            <div class="text-xs text-gray-600">
+                &copy; 2026 PredictiveFPL. Not affiliated with the Premier League.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
+
+

@@ -1,0 +1,340 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'neon-green': '#00ff88',
+                        'neon-purple': '#a855f7',
+                        'dark-bg': '#0a0e1a',
+                        'dark-card': '#131829',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .pitch-pattern {
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        .glow-green {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+        
+        .input-glow:focus {
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+        
+        .gradient-border {
+            position: relative;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(168, 85, 247, 0.1));
+            padding: 2px;
+            border-radius: 12px;
+        }
+        
+        .gradient-border-inner {
+            background: #131829;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-white pitch-pattern">
+
+    <main id="main-content" class="min-h-screen flex items-center justify-center px-4 py-8 lg:py-12">
+        <div class="w-full max-w-7xl mx-auto grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            
+            <section id="connection-form-section" class="order-2 lg:order-1">
+                <div class="gradient-border max-w-xl mx-auto lg:mx-0">
+                    <div class="gradient-border-inner p-8 lg:p-12">
+                        
+                        <div id="header-section" class="mb-8">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-neon-green to-neon-purple rounded-lg flex items-center justify-center glow-green">
+                                    <i class="fa-solid fa-shield-halved text-dark-bg text-xl"></i>
+                                </div>
+                                <h1 class="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-neon-green to-neon-purple bg-clip-text text-transparent">
+                                    Connect Your FPL Account
+                                </h1>
+                            </div>
+                            <p class="text-gray-400 text-sm lg:text-base">
+                                Securely link your Fantasy Premier League account for real-time data sync and enhanced features.
+                            </p>
+                        </div>
+
+                        <div id="security-badges" class="flex flex-wrap gap-3 mb-8">
+                            <div class="flex items-center gap-2 bg-dark-bg px-4 py-2 rounded-lg border border-neon-green/20">
+                                <i class="fa-solid fa-lock text-neon-green text-sm"></i>
+                                <span class="text-xs font-medium text-gray-300">End-to-End Encrypted</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-dark-bg px-4 py-2 rounded-lg border border-neon-purple/20">
+                                <i class="fa-solid fa-database text-neon-purple text-sm"></i>
+                                <span class="text-xs font-medium text-gray-300">Direct API Access</span>
+                            </div>
+                        </div>
+
+                        <form id="fpl-connection-form" class="space-y-6">
+                            
+                            <div id="email-field">
+                                <label for="fpl-email" class="block text-sm font-semibold text-gray-300 mb-2">
+                                    FPL Email Address
+                                </label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                                    <input 
+                                        type="email" 
+                                        id="fpl-email" 
+                                        placeholder="your.email@example.com"
+                                        class="w-full bg-dark-bg border border-gray-700 rounded-lg pl-12 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-neon-green input-glow transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div id="password-field">
+                                <label for="fpl-password" class="block text-sm font-semibold text-gray-300 mb-2">
+                                    FPL Password
+                                </label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                                    <input 
+                                        type="password" 
+                                        id="fpl-password" 
+                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                        class="w-full bg-dark-bg border border-gray-700 rounded-lg pl-12 pr-12 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-neon-green input-glow transition-all"
+                                    />
+                                    <i class="fa-solid fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-neon-green transition-colors"></i>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-info-circle text-neon-green"></i>
+                                    We do not store your password. Direct connection only.
+                                </p>
+                            </div>
+
+                            <button 
+                                type="button"
+                                id="secure-connect-btn"
+                                class="w-full bg-gradient-to-r from-neon-green to-emerald-500 hover:from-neon-green/90 hover:to-emerald-500/90 text-dark-bg font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-all glow-green hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <i class="fa-solid fa-lock text-lg"></i>
+                                <span class="text-lg">Secure Connection</span>
+                            </button>
+
+                        </form>
+
+                        <div id="trust-footer" class="mt-8 pt-6 border-t border-gray-800">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-shield-check text-neon-purple text-xl mt-1"></i>
+                                <div>
+                                    <h3 class="font-semibold text-sm text-gray-300 mb-1">Your Security is Our Priority</h3>
+                                    <p class="text-xs text-gray-500 leading-relaxed">
+                                        All credentials are transmitted using industry-standard encryption. We never store your password and only access official FPL APIs.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <section id="benefits-section" class="order-1 lg:order-2">
+                <div class="max-w-xl mx-auto lg:mx-0">
+                    
+                    <div id="why-connect-header" class="mb-8">
+                        <h2 class="text-3xl lg:text-4xl font-bold mb-4">
+                            Why Connect Your <span class="bg-gradient-to-r from-neon-green to-neon-purple bg-clip-text text-transparent">FPL Account?</span>
+                        </h2>
+                        <p class="text-gray-400 text-base lg:text-lg">
+                            Unlock powerful features and real-time insights by connecting directly to your Fantasy Premier League account.
+                        </p>
+                    </div>
+
+                    <div id="benefits-list" class="space-y-6">
+                        
+                        <div id="benefit-1" class="bg-dark-card border border-gray-800 rounded-xl p-6 hover:border-neon-green/30 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-neon-green/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-coins text-neon-green text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2">Real-Time Bank Balance</h3>
+                                    <p class="text-gray-400 text-sm leading-relaxed">
+                                        Instantly view your available budget and make informed transfer decisions with live balance updates.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="benefit-2" class="bg-dark-card border border-gray-800 rounded-xl p-6 hover:border-neon-purple/30 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-neon-purple/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-microchip text-neon-purple text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2">Accurate Chip Status</h3>
+                                    <p class="text-gray-400 text-sm leading-relaxed">
+                                        Track your Wildcard, Free Hit, Bench Boost, and Triple Captain chips with precision and never miss strategic opportunities.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="benefit-3" class="bg-dark-card border border-gray-800 rounded-xl p-6 hover:border-neon-green/30 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-neon-green to-neon-purple rounded-lg flex items-center justify-center flex-shrink-0 glow-green">
+                                    <i class="fa-solid fa-arrows-rotate text-dark-bg text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2">Instant Transfer Sync</h3>
+                                    <p class="text-gray-400 text-sm leading-relaxed">
+                                        Automatically sync your transfers, team changes, and captain selections in real-time for seamless management.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="benefit-4" class="bg-dark-card border border-gray-800 rounded-xl p-6 hover:border-neon-purple/30 transition-all">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-neon-purple/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-chart-line text-neon-purple text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg mb-2">Advanced Analytics</h3>
+                                    <p class="text-gray-400 text-sm leading-relaxed">
+                                        Access detailed performance metrics, historical data, and AI-powered insights to optimize your team strategy.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div id="security-note" class="mt-8 bg-gradient-to-r from-neon-green/5 to-neon-purple/5 border border-neon-green/20 rounded-xl p-6">
+                        <div class="flex items-start gap-4">
+                            <i class="fa-solid fa-circle-info text-neon-green text-2xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-base mb-2">How It Works</h4>
+                                <p class="text-gray-400 text-sm leading-relaxed">
+                                    We use the official Fantasy Premier League API to fetch your data directly. Your credentials are used once to establish a secure session and are never stored on our servers.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const btn = document.querySelector("button");
+  const statusDiv = document.getElementById("connect-status");
+  if (!btn) return;
+  btn.addEventListener("click", async function() {
+    const email = document.querySelector("input[type='email'], input[placeholder*='email']")?.value;
+    const password = document.querySelector("input[type='password']")?.value;
+    if (!email || !password) {
+      statusDiv.innerHTML = "<span style='color:#f87171'>Please enter your email and password.</span>";
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = "<span style='opacity:0.7'>Connecting...</span>";
+    statusDiv.innerHTML = "<span style='color:#60a5fa'>Connecting to FPL...</span>";
+    try {
+      const res = await fetch("http://localhost:8000/api/fpl-login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("fplTeamId", data.team_id);
+        localStorage.setItem("fplName", data.first_name + " " + data.last_name);
+        statusDiv.innerHTML = "<span style='color:#4ade80'>Connected! Team ID: " + data.team_id + ". Redirecting...</span>";
+        setTimeout(() => { window.top.location.href = "/syncing"; }, 1500);
+      } else {
+        statusDiv.innerHTML = "<span style='color:#f87171'>" + (data.error || "Login failed.") + "</span>";
+        btn.disabled = false;
+        btn.innerHTML = "<span>Secure Connection</span>";
+      }
+    } catch(e) {
+      statusDiv.innerHTML = "<span style='color:#f87171'>Connection error. Please try again.</span>";
+      btn.disabled = false;
+      btn.innerHTML = "<span>Secure Connection</span>";
+    }
+  });
+});
+</script><div id="connect-status" style="margin-top:12px;text-align:center;font-size:13px;min-height:20px;padding:0 20px;"></div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const btn = document.querySelector("button");
+  const statusDiv = document.getElementById("connect-status");
+  if (!btn || !statusDiv) return;
+  btn.addEventListener("click", async function() {
+    const email = document.querySelector('input[type="email"]')?.value?.trim();
+    const password = document.querySelector('input[type="password"]')?.value;
+    if (!email || !password) {
+      statusDiv.innerHTML = "<span style='color:#f87171'>Please enter your email and password.</span>";
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = "Connecting...";
+    statusDiv.innerHTML = "<span style='color:#60a5fa'>Connecting to FPL...</span>";
+    try {
+      const res = await fetch("http://localhost:8000/api/fpl-login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("fplTeamId", String(data.team_id));
+        localStorage.setItem("fplName", data.first_name + " " + data.last_name);
+        statusDiv.innerHTML = "<span style='color:#4ade80'>Connected! Team ID: " + data.team_id + ". Redirecting...</span>";
+        setTimeout(() => { window.top.location.href = "/syncing"; }, 1500);
+      } else {
+        statusDiv.innerHTML = "<span style='color:#f87171'>" + (data.error || "Login failed. Please check your credentials.") + "</span>";
+        btn.disabled = false;
+        btn.innerHTML = "Secure Connection";
+      }
+    } catch(e) {
+      statusDiv.innerHTML = "<span style='color:#f87171'>Connection error. Is the engine running?</span>";
+      btn.disabled = false;
+      btn.innerHTML = "Secure Connection";
+    }
+  });
+});
+</script>
+</body>
+</html>
+
+
