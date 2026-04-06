@@ -30,7 +30,12 @@ const MOCK_DATA = {
 }
 
 const fetchFPL = async (path) => {
-  const res = await fetch(`/fpl${path}`)
+  const isLocal = window.location.hostname === "localhost"
+  const url = isLocal ? `/fpl${path}` : `/api/fpl?path=${encodeURIComponent(path)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("FPL API error")
+  return res.json()
+}`)
   if (!res.ok) throw new Error('FPL API error')
   return res.json()
 }
@@ -346,3 +351,4 @@ export default function Dashboard() {
     </div>
   )
 }
+
