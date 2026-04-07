@@ -4,12 +4,9 @@ import { useUser } from '@clerk/clerk-react'
 
 const fetchFPL = async (path) => {
   const isLocal = window.location.hostname === "localhost"
-  const url = isLocal ? `/fpl${path}` : `/api/fpl?path=${encodeURIComponent(path)}`
+  const url = isLocal ? "/fpl" + path : "/api/fpl?path=" + encodeURIComponent(path)
   const res = await fetch(url)
   if (!res.ok) throw new Error("FPL API error")
-  return res.json()
-}`)
-  if (!res.ok) throw new Error('FPL API error')
   return res.json()
 }
 
@@ -348,4 +345,7 @@ export default function MyTeam() {
     </div>
   )
 }
+
+
+
 
