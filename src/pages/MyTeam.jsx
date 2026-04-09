@@ -69,7 +69,7 @@ export default function MyTeam() {
   const [activeChip, setActiveChip] = useState(null)
   const [draftBank, setDraftBank] = useState(MOCK_DATA.bank)
   const [transferCount, setTransferCount] = useState(0)
-  const teamId = localStorage.getItem('fplTeamId') || user?.unsafeMetadata?.fplTeamId || '3321638'
+  const teamId = localStorage.getItem('fplTeamId')
 
   useEffect(() => {
     if (teamId) loadTeam(teamId)
@@ -345,6 +345,7 @@ export default function MyTeam() {
     </div>
   )
 }
+
 
 
 

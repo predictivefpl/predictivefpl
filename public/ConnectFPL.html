@@ -229,7 +229,69 @@
         </div>
     </footer>
 
-</body>
+<script>
+(function() {
+  var nextBtn = document.querySelector('a[href*="syncing"], button');
+  var teamInput = document.querySelector('input[type="text"], input[type="number"], input[placeholder*="team"], input[placeholder*="Team"], input[placeholder*="ID"], input[placeholder*="id"]');
+  var skipBtn = document.querySelectorAll('a, button');
+
+  // Find and wire up the main submit/next button
+  document.querySelectorAll('button, a').forEach(function(el) {
+    var txt = el.textContent.trim().toLowerCase();
+    if (txt.includes('next') || txt.includes('connect') || txt.includes('confirm') || txt.includes('sync')) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        var input = document.querySelector('input[type="text"], input[type="number"]');
+        var teamId = input ? input.value.trim() : null;
+        if (teamId && !isNaN(teamId)) {
+          window.parent.postMessage({ type: 'FPL_TEAM_ID', teamId: parseInt(teamId) }, '*');
+        } else {
+          var errEl = document.getElementById('fpl-error');
+          if (errEl) errEl.textContent = 'Please enter a valid Team ID';
+        }
+      });
+    }
+    if (txt.includes('skip')) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.parent.postMessage({ type: 'FPL_SKIP' }, '*');
+      });
+    }
+  });
+})();
+</script><script>
+(function() {
+  var nextBtn = document.querySelector('a[href*="syncing"], button');
+  var teamInput = document.querySelector('input[type="text"], input[type="number"], input[placeholder*="team"], input[placeholder*="Team"], input[placeholder*="ID"], input[placeholder*="id"]');
+  var skipBtn = document.querySelectorAll('a, button');
+
+  // Find and wire up the main submit/next button
+  document.querySelectorAll('button, a').forEach(function(el) {
+    var txt = el.textContent.trim().toLowerCase();
+    if (txt.includes('next') || txt.includes('connect') || txt.includes('confirm') || txt.includes('sync')) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        var input = document.querySelector('input[type="text"], input[type="number"]');
+        var teamId = input ? input.value.trim() : null;
+        if (teamId && !isNaN(teamId)) {
+          window.parent.postMessage({ type: 'FPL_TEAM_ID', teamId: parseInt(teamId) }, '*');
+        } else {
+          var errEl = document.getElementById('fpl-error');
+          if (errEl) errEl.textContent = 'Please enter a valid Team ID';
+        }
+      });
+    }
+    if (txt.includes('skip')) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.parent.postMessage({ type: 'FPL_SKIP' }, '*');
+      });
+    }
+  });
+})();
+</script></body>
 </html>
+
+
 
 
