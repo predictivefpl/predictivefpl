@@ -28,10 +28,10 @@ export default function Dashboard() {
   const [error, setError] = useState("")
   const [engineStatus, setEngineStatus] = useState(null)
 
-  const teamId = localStorage.getItem("fplTeamId")
+  const teamId = (user?.unsafeMetadata?.fplTeamId) || localStorage.getItem("fplTeamId")
 
   useEffect(() => {
-    if (!teamId) {
+    if (!teamId && !user?.unsafeMetadata?.fplTeamId) {
       navigate("/connect")
       return
     }
@@ -340,3 +340,6 @@ export default function Dashboard() {
     </div>
   )
 }
+
+
+
