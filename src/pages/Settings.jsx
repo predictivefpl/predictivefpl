@@ -4,14 +4,14 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 
 const getLS = (key, fallback) => {
-  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback } catch { return fallback }
+  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
+  catch { return fallback }
 }
 
 export default function Settings() {
   const { user } = useUser()
   const { signOut } = useClerk()
   const navigate = useNavigate()
-
   const [profile, setProfile] = useState({
     name: `${user?.firstName||''} ${user?.lastName||''}`.trim() || 'Manager',
     email: user?.primaryEmailAddress?.emailAddress || '',
@@ -22,12 +22,8 @@ export default function Settings() {
     emailNotifs: getLS('pref_emailNotifs', true),
     aiUpdates: getLS('pref_aiUpdates', false),
     marketing: getLS('pref_marketing', false),
-    darkMode: getLS('pref_darkMode', true),
-    demoMode: getLS('pref_demoMode', true),
-    debugMode: getLS('pref_debugMode', false),
   })
 
-  // Persist prefs to localStorage whenever they change
   useEffect(() => {
     Object.entries(prefs).forEach(([k,v]) => localStorage.setItem(`pref_${k}`, JSON.stringify(v)))
   }, [prefs])
@@ -52,18 +48,11 @@ export default function Settings() {
     { key:'marketing', label:'Marketing & Promotions', sub:'Receive updates about new features and offers' },
   ]
 
-  const APP_PREFS = [
-    { key:'darkMode', label:'Dark Mode', sub:'Always use dark theme (recommended)', color:'bg-blue-500' },
-    { key:'demoMode', label:'Demo Mode', sub:'Use mock data instead of live FPL API — great for demos', color:'bg-purple-500' },
-    { key:'debugMode', label:'Debug / Developer Mode', sub:'Enable verbose console logging for development', color:'bg-yellow-500' },
-  ]
-
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
       <Sidebar/>
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <main className="flex-1 overflow-y-auto custom-scroll p-6 md:p-8 lg:p-10 max-w-5xl mx-auto w-full">
-
           <div className="mb-10">
             <h1 className="text-4xl font-bold mb-2">Account Settings</h1>
             <p className="text-gray-400 text-lg">Manage your profile, subscription, and preferences</p>
@@ -80,24 +69,20 @@ export default function Settings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Full Name</label>
-                <input type="text" value={profile.name}
-                  onChange={e => setProfile(p => ({...p, name: e.target.value}))}
+                <input type="text" value={profile.name} onChange={e => setProfile(p => ({...p, name: e.target.value}))}
                   className="w-full bg-[#1A1D2E] border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"/>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                <input type="email" value={profile.email}
-                  onChange={e => setProfile(p => ({...p, email: e.target.value}))}
+                <input type="email" value={profile.email} onChange={e => setProfile(p => ({...p, email: e.target.value}))}
                   className="w-full bg-[#1A1D2E] border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"/>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">FPL Team ID</label>
                 <div className="flex gap-2">
-                  <input type="text" value={teamId} onChange={e=>setTeamId(e.target.value)}
-                    placeholder="e.g. 3321638"
+                  <input type="text" value={teamId} onChange={e=>setTeamId(e.target.value)} placeholder="e.g. 3321638"
                     className="flex-1 bg-[#1A1D2E] border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors"/>
-                  <button onClick={disconnectFPL}
-                    className="px-4 py-3 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium whitespace-nowrap">
+                  <button onClick={disconnectFPL} className="px-4 py-3 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium whitespace-nowrap">
                     <i className="fa-solid fa-unlink mr-1"/> Disconnect
                   </button>
                 </div>
@@ -123,28 +108,24 @@ export default function Settings() {
               </div>
               <h2 className="text-xl font-bold">FPL Account Connection</h2>
             </div>
-            <div className={`rounded-xl p-5 border ${teamId ? 'bg-green-500/5 border-green-500/30' : 'bg-red-500/5 border-red-500/30'}`}>
+            <div className={"rounded-xl p-5 border "+(teamId ? 'bg-green-500/5 border-green-500/30' : 'bg-red-500/5 border-red-500/30')}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${teamId ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}/>
+                  <div className={"w-3 h-3 rounded-full "+(teamId ? 'bg-green-400 animate-pulse' : 'bg-red-400')}/>
                   <div>
-                    <p className={`font-bold ${teamId ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={"font-bold "+(teamId ? 'text-green-400' : 'text-red-400')}>
                       {teamId ? 'Connected' : 'Not Connected'}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {teamId ? `Team ID: ${teamId}` : 'No FPL account linked'}
-                    </p>
+                    <p className="text-xs text-gray-500">{teamId ? "Team ID: "+teamId : 'No FPL account linked'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   {teamId && (
-                    <button onClick={() => navigate('/dashboard')}
-                      className="px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors">
+                    <button onClick={() => navigate('/dashboard')} className="px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors">
                       <i className="fa-solid fa-chart-line mr-1"/> View Dashboard
                     </button>
                   )}
-                  <button onClick={disconnectFPL}
-                    className="px-4 py-2 rounded-xl bg-[#1A1D2E] border border-gray-700 text-gray-400 text-sm font-medium hover:text-white transition-colors">
+                  <button onClick={disconnectFPL} className="px-4 py-2 rounded-xl bg-[#1A1D2E] border border-gray-700 text-gray-400 text-sm font-medium hover:text-white transition-colors">
                     <i className="fa-solid fa-rotate mr-1"/> {teamId ? 'Update' : 'Connect'}
                   </button>
                 </div>
@@ -181,43 +162,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* App Preferences */}
-          <div className="glass-card rounded-2xl p-6 md:p-8 mb-6 border border-gray-700/50">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-[#1A1D2E] border border-blue-500/30 flex items-center justify-center">
-                <i className="fa-solid fa-sliders text-blue-400 text-xl"/>
-              </div>
-              <h2 className="text-xl font-bold">App Preferences</h2>
-            </div>
-            <div className="space-y-4">
-              {APP_PREFS.map(item => (
-                <div key={item.key} className="flex items-center justify-between p-4 bg-[#1A1D2E]/50 rounded-xl border border-gray-700/50">
-                  <div>
-                    <p className="text-sm font-medium text-white">{item.label}</p>
-                    <p className="text-xs text-gray-500">{item.sub}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {prefs[item.key] && (
-                      <span className="text-xs text-green-400 font-medium">ON</span>
-                    )}
-                    <button onClick={() => togglePref(item.key)}
-                      className={`w-11 h-6 rounded-full relative transition-colors ${prefs[item.key] ? item.color : 'bg-gray-700'}`}>
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${prefs[item.key] ? 'right-0.5' : 'left-0.5'}`}/>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {prefs.demoMode && (
-              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
-                <p className="text-xs text-purple-400">
-                  <i className="fa-solid fa-circle-info mr-2"/>
-                  <strong>Demo Mode is ON</strong> — The app is using mock data. Toggle off to connect to the live FPL API.
-                </p>
-              </div>
-            )}
-          </div>
-
           {/* Notifications */}
           <div className="glass-card rounded-2xl p-6 md:p-8 mb-6 border border-gray-700/50">
             <div className="flex items-center gap-3 mb-6">
@@ -233,9 +177,8 @@ export default function Settings() {
                     <p className="text-sm font-medium text-white">{item.label}</p>
                     <p className="text-xs text-gray-500">{item.sub}</p>
                   </div>
-                  <button onClick={() => togglePref(item.key)}
-                    className={`w-11 h-6 rounded-full relative transition-colors ${prefs[item.key] ? 'bg-blue-500' : 'bg-gray-700'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${prefs[item.key] ? 'right-0.5' : 'left-0.5'}`}/>
+                  <button onClick={() => togglePref(item.key)} className={"w-11 h-6 rounded-full relative transition-colors "+(prefs[item.key] ? 'bg-blue-500' : 'bg-gray-700')}>
+                    <div className={"w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all "+(prefs[item.key] ? 'right-0.5' : 'left-0.5')}/>
                   </button>
                 </div>
               ))}
@@ -251,24 +194,21 @@ export default function Settings() {
                   <p className="text-sm font-medium text-white">Disconnect FPL Account</p>
                   <p className="text-xs text-gray-500">Clears your Team ID and returns to the connection screen.</p>
                 </div>
-                <button onClick={disconnectFPL}
-                  className="px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-500/10 transition-all text-sm flex items-center gap-2">
+                <button onClick={disconnectFPL} className="px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-500/10 transition-all text-sm flex items-center gap-2">
                   <i className="fa-solid fa-unlink"/> Disconnect
                 </button>
               </div>
               <div className="flex items-center justify-between p-4 bg-[#1A1D2E]/50 rounded-xl border border-gray-700/50">
                 <div>
                   <p className="text-sm font-medium text-white">Sign Out</p>
-                  <p className="text-xs text-gray-500">You'll need to sign in again to access your account.</p>
+                  <p className="text-xs text-gray-500">You will need to sign in again to access your account.</p>
                 </div>
-                <button onClick={() => signOut(() => navigate('/'))}
-                  className="px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-500/10 transition-all text-sm flex items-center gap-2">
+                <button onClick={() => signOut(() => navigate('/'))} className="px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-500/10 transition-all text-sm flex items-center gap-2">
                   <i className="fa-solid fa-right-from-bracket"/> Sign Out
                 </button>
               </div>
             </div>
           </div>
-
         </main>
       </div>
     </div>

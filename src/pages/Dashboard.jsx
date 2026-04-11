@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [error, setError] = useState("")
   const [engineStatus, setEngineStatus] = useState(null)
 
+  localStorage.removeItem('pref_demoMode')
   const teamId = (user?.unsafeMetadata?.fplTeamId) || localStorage.getItem("fplTeamId")
 
   useEffect(() => {
@@ -340,6 +341,7 @@ export default function Dashboard() {
     </div>
   )
 }
+
 
 
 
