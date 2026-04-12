@@ -180,8 +180,8 @@ export default function OptimizerSettings() {
               <p className="text-white font-bold mb-1">Ready to Optimize</p>
               <p className="text-gray-400 text-sm">
                 {numTransfers} transfer{numTransfers !== 1 ? 's' : ''} &bull; {strategy} &bull; {horizon} GW horizon &bull; {objective}
-                {wildcard && ' • Wildcard ON'}
-                {freeHit && ' • Free Hit ON'}
+                {activeChip === 'wildcard' && ' • Wildcard ON'}
+                {activeChip === 'freehit' && ' • Free Hit ON'}
               </p>
               {saved && <p className="text-green-400 text-sm mt-1 flex items-center gap-1"><i className="fa-solid fa-check"/> Configuration saved!</p>}
             </div>
