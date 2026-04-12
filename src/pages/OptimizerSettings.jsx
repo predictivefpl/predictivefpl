@@ -10,8 +10,7 @@ export default function OptimizerSettings() {
   const navigate = useNavigate()
   const [strategy, setStrategy] = useState(getLS('opt_strategy', 'Balanced'))
   const [numTransfers, setNumTransfers] = useState(getLS('opt_transfers', 1))
-  const [wildcard, setWildcard] = useState(getLS('opt_wildcard', false))
-  const [freeHit, setFreeHit] = useState(getLS('opt_freehit', false))
+  const [activeChip, setActiveChip] = useState(getLS('opt_activechip', null))
   const [horizon, setHorizon] = useState(getLS('opt_horizon', 5))
   const [objective, setObjective] = useState(getLS('opt_objective', 'Maximize Total Points'))
   const [saved, setSaved] = useState(false)
@@ -35,8 +34,7 @@ export default function OptimizerSettings() {
   const saveAndRun = () => {
     localStorage.setItem('opt_strategy', JSON.stringify(strategy))
     localStorage.setItem('opt_transfers', JSON.stringify(numTransfers))
-    localStorage.setItem('opt_wildcard', JSON.stringify(wildcard))
-    localStorage.setItem('opt_freehit', JSON.stringify(freeHit))
+    localStorage.setItem('opt_activechip', JSON.stringify(activeChip))
     localStorage.setItem('opt_horizon', JSON.stringify(horizon))
     localStorage.setItem('opt_objective', JSON.stringify(objective))
     setRunning(true)
@@ -116,17 +114,17 @@ export default function OptimizerSettings() {
               <p className="text-gray-400 text-sm mb-5">Include chips in this optimization run.</p>
               <div className="space-y-3">
                 {[
-                  { key: 'wildcard', label: 'Wildcard', abbr: 'WC', state: wildcard, set: setWildcard },
-                  { key: 'freehit', label: 'Free Hit', abbr: 'FH', state: freeHit, set: setFreeHit },
+                  { key: 'wildcard', label: 'Wildcard', abbr: 'WC' },
+                  { key: 'freehit', label: 'Free Hit', abbr: 'FH' },
                 ].map(chip => (
                   <div key={chip.key} className="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
                     <div className="flex items-center gap-3">
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-400/10 text-green-400 border border-green-400/20">{chip.abbr}</span>
                       <span className="text-sm text-white font-medium">{chip.label}</span>
                     </div>
-                    <button onClick={() => chip.set(!chip.state)}
-                      className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${chip.state ? 'bg-green-400' : 'bg-gray-700'}`}>
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 ${chip.state ? 'right-0.5' : 'left-0.5'}`}/>
+                    <button onClick={() => setActiveChip(activeChip === chip.key ? null : chip.key)}
+                      className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${activeChip === chip.key ? 'bg-green-400' : 'bg-gray-700'}`}>
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 ${activeChip === chip.key ? 'right-0.5' : 'left-0.5'}`}/>
                     </button>
                   </div>
                 ))}
