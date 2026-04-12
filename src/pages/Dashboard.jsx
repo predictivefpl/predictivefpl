@@ -4,18 +4,18 @@ import Sidebar from '../components/Sidebar'
 import { useUser } from '@clerk/clerk-react'
 
 const fetchFPL = async (path) => {
-  const isLocal = window.location.hostname === "localhost"
+  const isLocal = false // Always use Railway engine
+  const ENGINE_URL = 'https://web-production-21545.up.railway.app'
   const url = isLocal ? "/fpl" + path : "/api/fpl?path=" + encodeURIComponent(path)
   const res = await fetch(url)
   if (!res.ok) throw new Error("FPL API error")
   return res.json()
 }
 
+const ENGINE_URL = import.meta.env.VITE_ENGINE_URL || 'http://localhost:8000'
 const fetchEngine = async (path) => {
-  const isLocal = window.location.hostname === "localhost"
-  const base = isLocal ? "" : ""
-  const res = await fetch(base + "/engine" + path)
-  if (!res.ok) throw new Error("Engine error")
+  const res = await fetch(ENGINE_URL + path)
+  if (!res.ok) throw new Error('Engine error')
   return res.json()
 }
 
@@ -341,6 +341,7 @@ export default function Dashboard() {
     </div>
   )
 }
+
 
 
 

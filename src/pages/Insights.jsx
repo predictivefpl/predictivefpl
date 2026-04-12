@@ -1,8 +1,9 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 
+const ENGINE_URL = import.meta.env.VITE_ENGINE_URL || 'http://localhost:8000'
 const fetchEngine = async (path) => {
-  const res = await fetch(`/engine${path}`)
+  const res = await fetch(ENGINE_URL + path)
   if (!res.ok) throw new Error('Engine error')
   return res.json()
 }
