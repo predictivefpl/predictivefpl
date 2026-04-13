@@ -1,204 +1,261 @@
-﻿import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
 
 const getLS = (key, fallback) => {
-  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback } catch { return fallback }
+  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
+  catch { return fallback }
 }
 
+const ENGINE_URL = import.meta.env.VITE_ENGINE_URL || 'http://localhost:8000'
+
 export default function OptimizerSettings() {
-  const navigate = useNavigate()
-  const [strategy, setStrategy] = useState(getLS('opt_strategy', 'Balanced'))
-  const [numTransfers, setNumTransfers] = useState(getLS('opt_transfers', 1))
+  const { user } = useUser()
+  const [strategy, setStrategy] = useState(getLS('opt_strategy', 'balanced'))
+  const [transfers, setTransfers] = useState(getLS('opt_transfers', 1))
   const [activeChip, setActiveChip] = useState(getLS('opt_activechip', null))
-  const [horizon, setHorizon] = useState(getLS('opt_horizon', 5))
-  const [objective, setObjective] = useState(getLS('opt_objective', 'Maximize Total Points'))
-  const [saved, setSaved] = useState(false)
+  const [horizon, setHorizon] = useState(getLS('opt_horizon', 3))
+  const [objective, setObjective] = useState(getLS('opt_objective', 'total_points'))
   const [running, setRunning] = useState(false)
+  const [results, setResults] = useState(null)
+  const [error, setError] = useState('')
 
-  const bank = parseFloat(localStorage.getItem('opt_bank') || '0.5')
+  const teamId = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')
 
-  const STRATEGIES = [
-    { id: 'Conservative', desc: 'Focus on high ownership & established performers.' },
-    { id: 'Balanced', desc: 'Mix of reliable points and calculated differentials.' },
-    { id: 'Aggressive', desc: 'High variance, chasing massive hauls and low ownership.' },
-  ]
-
-  const OBJECTIVES = [
-    'Maximize Total Points',
-    'Maximize Team Value',
-    'Target Top 10k Rank',
-    'Beat My Mini-League',
-  ]
-
-  const saveAndRun = () => {
+  useEffect(() => {
     localStorage.setItem('opt_strategy', JSON.stringify(strategy))
-    localStorage.setItem('opt_transfers', JSON.stringify(numTransfers))
+    localStorage.setItem('opt_transfers', JSON.stringify(transfers))
     localStorage.setItem('opt_activechip', JSON.stringify(activeChip))
     localStorage.setItem('opt_horizon', JSON.stringify(horizon))
     localStorage.setItem('opt_objective', JSON.stringify(objective))
+  }, [strategy, transfers, activeChip, horizon, objective])
+
+  const runOptimiser = async () => {
+    if (!teamId) { setError('No FPL Team ID found. Go to Settings to connect your team.'); return }
     setRunning(true)
-    setTimeout(() => {
-      setRunning(false)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    }, 2000)
+    setError('')
+    setResults(null)
+    try {
+      const isLocal = window.location.hostname === 'localhost'
+      const fplBase = isLocal ? '/fpl' : '/api/fpl?path='
+      const fplUrl = (path) => isLocal ? fplBase + path : fplBase + encodeURIComponent(path)
+
+      const [bootstrap, entry] = await Promise.all([
+        fetch(fplUrl('/bootstrap-static/')).then(r => r.json()),
+        fetch(fplUrl('/entry/' + teamId + '/')).then(r => r.json()),
+      ])
+      const events = bootstrap.events || []
+      const currentEvent = events.find(e => e.is_current) || events.find(e => e.is_next) || events[events.length - 1]
+      const gw = currentEvent?.id || 1
+      const picks = await fetch(fplUrl('/entry/' + teamId + '/event/' + gw + '/picks/')).then(r => r.json())
+      const squadIds = picks.picks.map(p => p.element)
+      const bank = picks.entry_history.bank / 10
+
+      const payload = {
+        budget: bank,
+        num_transfers: activeChip ? 15 : transfers,
+        current_squad_ids: squadIds,
+        chip: activeChip,
+        objective: objective,
+        horizon_gws: horizon,
+      }
+      const res = await fetch(ENGINE_URL + '/api/optimise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Engine returned ' + res.status)
+      const data = await res.json()
+      setResults(data)
+    } catch (e) {
+      setError('Optimiser failed: ' + e.message)
+    }
+    setRunning(false)
   }
 
+  const strategies = [
+    { key: 'conservative', label: 'Conservative', desc: 'Focus on high ownership & established performers.' },
+    { key: 'balanced', label: 'Balanced', desc: 'Mix of reliable points and calculated differentials.' },
+    { key: 'aggressive', label: 'Aggressive', desc: 'High variance, chasing massive hauls and low ownership.' },
+  ]
+  const objectives = [
+    { key: 'total_points', label: 'Maximize Total Points' },
+    { key: 'team_value', label: 'Maximize Team Value' },
+    { key: 'top_10k', label: 'Target Top 10k Rank' },
+    { key: 'mini_league', label: 'Beat My Mini-League' },
+  ]
+  const chips = [
+    { key: 'wildcard', label: 'Wildcard', abbr: 'WC' },
+    { key: 'freehit', label: 'Free Hit', abbr: 'FH' },
+  ]
+
   return (
-    <div className="min-h-screen flex text-white" style={{ background: '#0d0f1a' }}>
-      <Sidebar/>
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-8 py-4 border-b border-white/10" style={{ background: '#1a0a2e' }}>
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-8 py-4 border-b border-gray-800/50">
+          <div className="flex items-center gap-3">
             <i className="fa-solid fa-robot text-green-400 text-xl"/>
-            <span className="font-bold text-white text-lg">Predictor<span className="text-green-400">AI</span></span>
+            <span className="text-xl font-bold text-green-400">PredictorAI</span>
           </div>
-          <div className="flex items-center gap-6 text-sm">
-            <span className="text-gray-400">Squad Value: <span className="text-green-400 font-bold">£102.4M</span></span>
-            <span className="px-3 py-1 rounded-lg border border-white/10 text-gray-400">In Bank: <span className="text-green-400 font-bold">£{bank}M</span></span>
-            <i className="fa-solid fa-bell text-gray-400"/>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto custom-scroll p-6 max-w-5xl mx-auto w-full">
-
-          {/* Optimization Strategy */}
-          <div className="rounded-2xl p-6 mb-6 border border-white/10" style={{ background: '#141625' }}>
-            <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
-              <i className="fa-solid fa-seedling text-green-400"/> Optimization Strategy
-            </h2>
-            <p className="text-gray-400 text-sm mb-5">Select the risk profile for the AI's recommendations.</p>
-            <div className="grid grid-cols-3 gap-4">
-              {STRATEGIES.map(s => (
-                <button key={s.id} onClick={() => setStrategy(s.id)}
-                  className={`p-5 rounded-xl border text-left transition-all duration-200 ${
-                    strategy === s.id
-                      ? 'border-green-400 bg-green-400/10 shadow-[0_0_20px_rgba(74,222,128,0.15)]'
-                      : 'border-white/10 bg-white/5 hover:border-green-400/50'
-                  }`}>
-                  <p className="font-bold text-white mb-1">{s.id}</p>
-                  <p className="text-xs text-gray-400">{s.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Planned Transfers + Active Chips */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div className="rounded-2xl p-6 border border-white/10" style={{ background: '#141625' }}>
-              <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
-                <i className="fa-solid fa-right-left text-green-400"/> Planned Transfers
-              </h2>
-              <p className="text-gray-400 text-sm mb-5">How many transfers per Gameweek?</p>
-              <div className="flex gap-3">
-                {[0,1,2,3,4,5].map(n => (
-                  <button key={n} onClick={() => setNumTransfers(n)}
-                    className={`w-11 h-11 rounded-xl font-bold text-sm border transition-all duration-200 ${
-                      numTransfers === n
-                        ? 'border-green-400 text-green-400 bg-green-400/10 shadow-[0_0_12px_rgba(74,222,128,0.3)]'
-                        : 'border-white/10 text-gray-400 bg-white/5 hover:border-green-400/50 hover:text-green-300'
-                    }`}>
-                    {n}
+        </div>
+        <main className="flex-1 overflow-y-auto custom-scroll p-8 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="glass-card rounded-2xl p-6 border border-gray-700/50 md:col-span-2">
+              <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-seedling text-green-400"/> Optimization Strategy</h2>
+              <p className="text-gray-400 text-sm mb-4">Select the risk profile for the AI recommendations.</p>
+              <div className="grid grid-cols-3 gap-4">
+                {strategies.map(s => (
+                  <button key={s.key} onClick={() => setStrategy(s.key)}
+                    className={"p-4 rounded-xl border text-left transition-all "+(strategy===s.key?'border-green-400 bg-green-400/10':'border-gray-700/50 bg-white/5 hover:border-gray-500')}>
+                    <p className="font-bold text-white mb-1">{s.label}</p>
+                    <p className="text-xs text-gray-400">{s.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
-
-            <div className="rounded-2xl p-6 border border-white/10" style={{ background: '#141625' }}>
-              <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
-                <i className="fa-solid fa-microchip text-green-400"/> Active Chips
-              </h2>
-              <p className="text-gray-400 text-sm mb-5">Include chips in this optimization run.</p>
+            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
+              <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-right-left text-green-400"/> Planned Transfers</h2>
+              <p className="text-gray-400 text-sm mb-5">How many transfers per Gameweek?</p>
+              <div className="flex gap-3">
+                {[0,1,2,3,4,5].map(n => (
+                  <button key={n} onClick={() => setTransfers(n)}
+                    className={"w-10 h-10 rounded-full font-bold text-sm transition-all border "+(transfers===n&&!activeChip?'border-green-400 text-green-400 bg-green-400/10':'border-gray-700 text-gray-400 hover:border-gray-500')}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+              {activeChip && <p className="text-xs text-green-400 mt-3"><i className="fa-solid fa-info-circle mr-1"/>{activeChip==='wildcard'?'Wildcard':'Free Hit'} overrides transfer count</p>}
+            </div>
+            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
+              <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-microchip text-green-400"/> Active Chips</h2>
+              <p className="text-gray-400 text-sm mb-5">Only one chip can be active at a time.</p>
               <div className="space-y-3">
-                {[
-                  { key: 'wildcard', label: 'Wildcard', abbr: 'WC' },
-                  { key: 'freehit', label: 'Free Hit', abbr: 'FH' },
-                ].map(chip => (
+                {chips.map(chip => (
                   <div key={chip.key} className="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-400/10 text-green-400 border border-green-400/20">{chip.abbr}</span>
                       <span className="text-sm text-white font-medium">{chip.label}</span>
                     </div>
-                    <button onClick={() => setActiveChip(activeChip === chip.key ? null : chip.key)}
-                      className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${activeChip === chip.key ? 'bg-green-400' : 'bg-gray-700'}`}>
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 ${activeChip === chip.key ? 'right-0.5' : 'left-0.5'}`}/>
+                    <button onClick={() => setActiveChip(activeChip===chip.key?null:chip.key)}
+                      className={"w-12 h-6 rounded-full relative transition-colors duration-200 "+(activeChip===chip.key?'bg-green-400':'bg-gray-700')}>
+                      <div className={"w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 "+(activeChip===chip.key?'right-0.5':'left-0.5')}/>
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Planning Horizon + Optimization Objective */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div className="rounded-2xl p-6 border border-white/10" style={{ background: '#141625' }}>
+            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
               <div className="flex items-center justify-between mb-1">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <i className="fa-solid fa-calendar text-green-400"/> Planning Horizon
-                </h2>
+                <h2 className="text-base font-bold flex items-center gap-2"><i className="fa-solid fa-calendar text-green-400"/> Planning Horizon</h2>
                 <span className="text-green-400 font-bold text-sm">{horizon} GWs</span>
               </div>
               <p className="text-gray-400 text-sm mb-5">How far ahead should the AI look?</p>
-              <input type="range" min="1" max="8" value={horizon}
-                onChange={e => setHorizon(parseInt(e.target.value))}
-                className="w-full accent-green-400"
-                style={{ accentColor: '#4ade80' }}/>
-              <div className="flex justify-between text-xs text-gray-500 mt-2">
-                {[1,2,3,4,5,6,7,8].map(n => <span key={n}>{n}</span>)}
-              </div>
+              <input type="range" min="1" max="8" value={horizon} onChange={e => setHorizon(Number(e.target.value))} className="w-full accent-green-400"/>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">{[1,2,3,4,5,6,7,8].map(n=><span key={n}>{n}</span>)}</div>
             </div>
-
-            <div className="rounded-2xl p-6 border border-white/10" style={{ background: '#141625' }}>
-              <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
-                <i className="fa-solid fa-bullseye text-green-400"/> Optimization Objective
-              </h2>
+            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
+              <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-bullseye text-green-400"/> Optimization Objective</h2>
               <p className="text-gray-400 text-sm mb-4">What is the primary goal?</p>
               <div className="space-y-2">
-                {OBJECTIVES.map(obj => (
-                  <button key={obj} onClick={() => setObjective(obj)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 text-sm ${
-                      objective === obj
-                        ? 'border-green-400/40 bg-green-400/10 text-white'
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:border-green-400/30 hover:text-white'
-                    }`}>
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${objective === obj ? 'border-green-400' : 'border-gray-600'}`}>
-                      {objective === obj && <span className="w-2 h-2 rounded-full bg-green-400"/>}
-                    </span>
-                    {obj}
+                {objectives.map(o => (
+                  <button key={o.key} onClick={() => setObjective(o.key)}
+                    className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all "+(objective===o.key?'border-green-400 bg-green-400/10 text-white':'border-gray-700 bg-white/5 text-gray-400 hover:border-gray-500')}>
+                    <div className={"w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 "+(objective===o.key?'border-green-400':'border-gray-600')}>
+                      {objective===o.key&&<div className="w-2 h-2 rounded-full bg-green-400"/>}
+                    </div>
+                    <span className="text-sm font-medium">{o.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Save & Run */}
-          <div className="rounded-2xl p-6 border border-white/10 flex items-center justify-between" style={{ background: '#141625' }}>
-            <div>
-              <p className="text-white font-bold mb-1">Ready to Optimize</p>
-              <p className="text-gray-400 text-sm">
-                {numTransfers} transfer{numTransfers !== 1 ? 's' : ''} &bull; {strategy} &bull; {horizon} GW horizon &bull; {objective}
-                {activeChip === 'wildcard' && ' • Wildcard ON'}
-                {activeChip === 'freehit' && ' • Free Hit ON'}
-              </p>
-              {saved && <p className="text-green-400 text-sm mt-1 flex items-center gap-1"><i className="fa-solid fa-check"/> Configuration saved!</p>}
+          <div className="glass-card rounded-2xl p-6 border border-gray-700/50 mb-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <p className="font-bold text-white mb-1">Ready to Optimize</p>
+                <p className="text-sm text-gray-400">
+                  {activeChip?(activeChip==='wildcard'?'Wildcard':'Free Hit')+' chip':transfers+' transfer'+(transfers!==1?'s':'')}
+                  {' \u2022 '}{strategies.find(s=>s.key===strategy)?.label}
+                  {' \u2022 '}{horizon} GW horizon
+                </p>
+              </div>
+              <button onClick={runOptimiser} disabled={running}
+                className="bg-green-500 hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl px-8 py-3 font-bold text-sm flex items-center gap-2 text-black transition-colors">
+                {running?<><i className="fa-solid fa-spinner fa-spin"/> Running AI...</>:<><i className="fa-solid fa-play"/> Save Configuration &amp; Run Optimizer</>}
+              </button>
             </div>
-            <button onClick={saveAndRun} disabled={running}
-              className={`px-8 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all duration-200 ${
-                running
-                  ? 'bg-green-400/20 border border-green-400/30 text-green-400 cursor-wait'
-                  : 'bg-green-400 text-black hover:bg-green-300 shadow-[0_0_20px_rgba(74,222,128,0.4)]'
-              }`}>
-              {running ? (
-                <><div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin"/> Running...</>
-              ) : (
-                <><i className="fa-solid fa-play"/> Save Configuration & Run Optimizer</>
-              )}
-            </button>
+            {error && <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"><i className="fa-solid fa-triangle-exclamation mr-2"/>{error}</div>}
           </div>
 
+          {results && (
+            <div className="glass-card rounded-2xl p-6 border border-green-500/30">
+              <h2 className="text-lg font-bold mb-5 flex items-center gap-2">
+                <i className="fa-solid fa-robot text-green-400"/> AI Transfer Recommendations
+                {results.projected_gain != null && (
+                  <span className="text-xs text-green-400 font-normal ml-2 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
+                    +{Number(results.projected_gain).toFixed(1)} xP gain
+                  </span>
+                )}
+              </h2>
+              {results.transfers && results.transfers.length > 0 ? (
+                <div className="space-y-3 mb-6">
+                  {results.transfers.map((t, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
+                      <div className="flex-1 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
+                          <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
+                        </div>
+                        <div>
+                          <p className="font-bold text-red-400">{t.transfer_out}</p>
+                          <p className="text-xs text-gray-500">Transfer Out{t.transfer_out_price?' \u2022 \u00a3'+Number(t.transfer_out_price).toFixed(1)+'m':''}</p>
+                        </div>
+                      </div>
+                      <i className="fa-solid fa-right-left text-gray-500"/>
+                      <div className="flex-1 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                          <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-400">{t.transfer_in}</p>
+                          <p className="text-xs text-gray-500">Transfer In{t.transfer_in_price?' \u2022 \u00a3'+Number(t.transfer_in_price).toFixed(1)+'m':''}</p>
+                        </div>
+                      </div>
+                      {t.xp_gain != null && (
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-white">+{Number(t.xp_gain).toFixed(1)}</p>
+                          <p className="text-xs text-gray-500">xP gain</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm mb-4">No transfers recommended — your squad is already optimal for the selected settings!</p>
+              )}
+              {results.recommended_squad && results.recommended_squad.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">Recommended Squad</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {results.recommended_squad.filter(p => !p.bench).map((p, i) => (
+                      <div key={i} className="bg-[#0F121D]/60 rounded-xl p-3 border border-gray-700/50">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={"text-[10px] px-1.5 py-0.5 rounded font-bold "+(p.position==='GKP'?'bg-yellow-500/20 text-yellow-400':p.position==='DEF'?'bg-green-500/20 text-green-400':p.position==='MID'?'bg-blue-500/20 text-blue-400':'bg-red-500/20 text-red-400')}>
+                            {p.position}
+                          </span>
+                          <span className="text-xs text-blue-400 font-medium">{p.price!=null?'\u00a3'+Number(p.price).toFixed(1)+'m':''}</span>
+                        </div>
+                        <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{p.team}{p.xp!=null?' \u2022 '+Number(p.xp).toFixed(1)+' xP':''}</p>
+                        {p.captain&&<span className="text-[9px] bg-blue-500 text-white px-1 rounded font-bold mt-1 inline-block">C</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
     </div>
