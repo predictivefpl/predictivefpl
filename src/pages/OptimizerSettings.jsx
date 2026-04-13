@@ -92,7 +92,7 @@ export default function OptimizerSettings() {
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between px-8 py-4 border-b border-gray-800/50">
           <div className="flex items-center gap-3">
             <i className="fa-solid fa-robot text-green-400 text-xl"/>
