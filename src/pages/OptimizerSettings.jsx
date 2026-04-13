@@ -50,9 +50,10 @@ export default function OptimizerSettings() {
       const picks = await fetch(fplUrl('/entry/' + teamId + '/event/' + gw + '/picks/')).then(r => r.json())
       const squadIds = picks.picks.map(p => p.element)
       const bank = picks.entry_history.bank / 10
+      const teamValue = picks.entry_history.value / 10
 
       const payload = {
-        budget: bank,
+        budget: teamValue + bank,
         num_transfers: activeChip ? 15 : transfers,
         current_squad_ids: squadIds,
         chip: activeChip,
