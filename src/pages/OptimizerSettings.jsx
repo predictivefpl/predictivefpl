@@ -7,7 +7,7 @@ const getLS = (key, fallback) => {
   catch { return fallback }
 }
 
-const ENGINE_URL = import.meta.env.VITE_ENGINE_URL || 'http://localhost:8000'
+const ENGINE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://web-production-21545.up.railway.app'
 
 export default function OptimizerSettings() {
   const { user } = useUser()

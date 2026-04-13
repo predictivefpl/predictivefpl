@@ -12,7 +12,7 @@ const fetchFPL = async (path) => {
   return res.json()
 }
 
-const ENGINE_URL = import.meta.env.VITE_ENGINE_URL || 'http://localhost:8000'
+const ENGINE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://web-production-21545.up.railway.app'
 const fetchEngine = async (path) => {
   const res = await fetch(ENGINE_URL + path)
   if (!res.ok) throw new Error('Engine error')
