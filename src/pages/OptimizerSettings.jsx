@@ -70,73 +70,132 @@ export default function OptimizerSettings() {
     if (!results) return null
     const ts = results.transfers || []
     const outs = ts.filter(t => t.action === 'out')
-    const ins = ts.filter(t => t.action === 'in')
+    const ins  = ts.filter(t => t.action === 'in')
     if (outs.length === 0) {
       return <p className="text-gray-400 text-sm mb-4">No transfers needed — squad is already optimal!</p>
     }
+    // xP gain: sum of xp_gw1 for players IN minus xp_gw1 for players OUT (using squad data)
+    const squadMap = {}
+    ;(results.squad || []).forEach(p => { squadMap[p.player_id] = p })
+    const totalGain = outs.reduce((acc, out, i) => {
+      const tin = ins[i]
+      const outXp = squadMap[out.player_id]?.xp_gw1 || 0
+      const inXp  = tin ? (squadMap[tin.player_id]?.xp_gw1 || tin.xp_gw1 || 0) : 0
+      return acc + (inXp - outXp)
+    }, 0)
     return (
-      <div className="space-y-3 mb-6">
-        {outs.map((out, i) => {
-          const tin = ins[i]
-          return (
-            <div key={i} className="flex items-center gap-3 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
-              <div className="flex-1 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
+      <div className="mb-6">
+        {totalGain !== 0 && (
+          <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-green-400/5 border border-green-400/20">
+            <i className="fa-solid fa-chart-line text-green-400"/>
+            <span className="text-sm text-gray-300">Projected xP change this GW:</span>
+            <span className={`text-sm font-bold ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {totalGain >= 0 ? '+' : ''}{totalGain.toFixed(1)} pts
+            </span>
+          </div>
+        )}
+        <div className="space-y-3">
+          {outs.map((out, i) => {
+            const tin   = ins[i]
+            const outXp = squadMap[out.player_id]?.xp_gw1 || 0
+            const inXp  = tin ? (squadMap[tin.player_id]?.xp_gw1 || tin.xp_gw1 || 0) : 0
+            const diff  = inXp - outXp
+            return (
+              <div key={i} className="flex items-center gap-3 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
+                  </div>
+                  <div>
+                    <p className="font-bold text-red-400">{out.name}</p>
+                    <p className="text-xs text-gray-500">OUT · £{Number(out.price).toFixed(1)}m{outXp ? ` · ${outXp.toFixed(1)} xP` : ''}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-red-400">{out.name}</p>
-                  <p className="text-xs text-gray-500">OUT · £{Number(out.price).toFixed(1)}m</p>
+                <div className="flex flex-col items-center flex-shrink-0 px-1">
+                  <i className="fa-solid fa-right-left text-gray-500 text-sm"/>
+                  {diff !== 0 && (
+                    <span className={`text-[10px] font-bold mt-1 ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {diff > 0 ? '+' : ''}{diff.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
+                  </div>
+                  <div>
+                    <p className="font-bold text-green-400">{tin ? tin.name : '—'}</p>
+                    <p className="text-xs text-gray-500">IN · £{tin ? Number(tin.price).toFixed(1) : '?'}m{inXp ? ` · ${inXp.toFixed(1)} xP` : ''}</p>
+                  </div>
                 </div>
               </div>
-              <i className="fa-solid fa-right-left text-gray-500 text-sm flex-shrink-0"/>
-              <div className="flex-1 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
-                  <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
-                </div>
-                <div>
-                  <p className="font-bold text-green-400">{tin ? tin.name : '—'}</p>
-                  <p className="text-xs text-gray-500">IN · £{tin ? Number(tin.price).toFixed(1) : '?'}m</p>
-                </div>
-              </div>
-              {tin && tin.xp_gw1 != null && (
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-white">{Number(tin.xp_gw1).toFixed(1)} xP</p>
-                  <p className="text-xs text-gray-500">next GW</p>
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     )
   }
 
     const renderSquad = () => {
     if (!results) return null
-    const squad = (results.squad || []).filter(p => p.is_starter !== false).slice(0, 11)
-    if (squad.length === 0) return null
+    const squad = results.squad || []
+    const starters = squad.filter(p => p.is_starter !== false).slice(0, 11)
+    const bench    = squad.filter(p => p.is_starter === false).slice(0, 4)
+    if (starters.length === 0) return null
+    const newIds = new Set(squad.filter(p => !originalSquad.includes(p.player_id)).map(p => p.player_id))
+    const posOrder = ['GKP', 'DEF', 'MID', 'FWD']
+    const rows = posOrder.map(pos => starters.filter(p => p.position === pos))
+
+    const PlayerCard = ({ p }) => {
+      const isNew = newIds.has(p.player_id)
+      return (
+        <div className={`flex flex-col items-center gap-1 cursor-default`}>
+          <div className={`relative w-12 h-12 rounded-full flex items-center justify-center border-2 ${isNew ? 'border-green-400 bg-green-400/20' : 'border-white/20 bg-white/10'}`}>
+            <span className={`text-[10px] font-bold ${isNew ? 'text-green-400' : 'text-white'}`}>
+              {p.position}
+            </span>
+            {p.is_captain && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-black text-[9px] font-black rounded-full flex items-center justify-center">C</span>
+            )}
+            {isNew && (
+              <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 text-black text-[9px] font-black rounded-full flex items-center justify-center">N</span>
+            )}
+          </div>
+          <p className={`text-[10px] font-bold text-center leading-tight max-w-[56px] truncate ${isNew ? 'text-green-400' : 'text-white'}`}>{p.name.split('.').pop() || p.name}</p>
+          <p className="text-[9px] text-gray-400">{p.xp_gw1 != null ? p.xp_gw1.toFixed(1) + ' xP' : ''}</p>
+        </div>
+      )
+    }
+
     return (
-      <div>
-        <h3 className="text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">Recommended Starting XI</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {squad.map((p, i) => (
-            <div key={i} className="bg-[#0F121D]/60 rounded-xl p-3 border border-gray-700/50">
-              <div className="flex justify-between items-start mb-1">
-                <span className={'text-[10px] px-1.5 py-0.5 rounded font-bold ' + (p.position === 'GKP' ? 'bg-yellow-500/20 text-yellow-400' : p.position === 'DEF' ? 'bg-green-500/20 text-green-400' : p.position === 'MID' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400')}>
-                  {p.position}
-                </span>
-                <span className="text-xs text-blue-400 font-medium">{p.price != null ? '\u00a3' + Number(p.price).toFixed(1) + 'm' : ''}</span>
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider">Recommended Starting XI</h3>
+          {newIds.size > 0 && <span className="text-[10px] bg-green-400/20 text-green-400 border border-green-400/30 px-2 py-0.5 rounded-full font-bold">N = New Player</span>}
+        </div>
+        <div className="rounded-2xl overflow-hidden border border-gray-700/50" style={{background: 'linear-gradient(180deg, #1a7a3c 0%, #166d35 50%, #1a7a3c 100%)'}}>
+          <div className="p-4 space-y-4">
+            {rows.map((row, ri) => (
+              row.length > 0 && (
+                <div key={ri} className="flex justify-center gap-3 flex-wrap">
+                  {row.map((p, pi) => <PlayerCard key={pi} p={p} />)}
+                </div>
+              )
+            ))}
+          </div>
+          {bench.length > 0 && (
+            <div className="border-t border-white/10 bg-black/20 p-3">
+              <p className="text-[10px] text-gray-400 text-center mb-2 uppercase tracking-wider">Bench</p>
+              <div className="flex justify-center gap-3">
+                {bench.map((p, i) => <PlayerCard key={i} p={p} />)}
               </div>
-              <p className="text-sm font-bold text-white truncate">{p.name}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">{p.team_short}{p.xp_gw1 != null ? ' \u2022 ' + Number(p.xp_gw1).toFixed(1) + ' xP' : ''}</p>
-              {p.is_captain && <span className="text-[9px] bg-blue-500 text-white px-1 rounded font-bold mt-1 inline-block">C</span>}
             </div>
-          ))}
+          )}
         </div>
       </div>
     )
   }
+
 
   const strategies = [
     { key: 'conservative', label: 'Conservative', desc: 'Focus on high ownership & established performers.' },
