@@ -3,6 +3,51 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
 
+const POS_COLOR = { GKP:'#f59e0b', DEF:'#10b981', MID:'#3b82f6', FWD:'#ef4444' }
+
+function PlayerToken({ p, photoMap, selected, onClick }) {
+  const col     = POS_COLOR[p.pos] || '#6b7280'
+  const photo   = photoMap?.[p.id]
+  const imgUrl  = photo ? 'https://resources.premierleague.com/premierleague/photos/players/110x140/p' + photo + '.png' : null
+  const surname = p.name.includes(' ') ? p.name.split(' ').pop() : p.name
+  return (
+    <div className="flex flex-col items-center gap-1 cursor-pointer" style={{minWidth:68}} onClick={() => onClick && onClick(p)}>
+      <div className="relative" style={{width:62,height:62}}>
+        {selected && <div className="absolute inset-0 rounded-full" style={{background:'radial-gradient(circle, '+col+'55 0%, transparent 70%)',transform:'scale(1.4)'}}/>}
+        <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"
+          style={{
+            borderColor: selected ? col : p.captain ? '#3b82f6' : 'rgba(255,255,255,0.2)',
+            background: 'linear-gradient(135deg, '+col+'22, '+col+'44)',
+            boxShadow: selected ? '0 0 14px '+col+'99' : p.captain ? '0 0 12px rgba(59,130,246,0.5)' : '0 2px 10px rgba(0,0,0,0.6)'
+          }}>
+          {imgUrl
+            ? <img src={imgUrl} alt={p.name} className="w-full h-full object-cover object-top" style={{transform:'scale(1.15) translateY(5px)'}} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}/>
+            : null}
+          <div className="w-full h-full flex items-center justify-center" style={{display: imgUrl ? 'none' : 'flex'}}>
+            <i className="fa-solid fa-person text-white/50 text-xl"/>
+          </div>
+        </div>
+        {p.captain && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-black text-[10px] font-black z-10"
+            style={{background:'linear-gradient(135deg,#facc15,#f59e0b)',boxShadow:'0 1px 4px rgba(0,0,0,0.5)'}}>C</div>
+        )}
+        {p.vice && !p.captain && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-500 flex items-center justify-center text-white text-[9px] font-black z-10">V</div>
+        )}
+      </div>
+      <div className="px-2 py-0.5 rounded-md text-center" style={{
+        background: selected ? col+'28' : 'rgba(0,0,0,0.55)',
+        border: '1px solid '+(selected ? col+'55' : 'rgba(255,255,255,0.1)'),
+        backdropFilter:'blur(4px)', maxWidth:76
+      }}>
+        <p className="font-bold text-white leading-tight" style={{fontSize:10,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{surname}</p>
+        <p style={{fontSize:9,color: p.captain ? '#facc15' : '#9ca3af'}}>{p.ppg} ppg</p>
+      </div>
+    </div>
+  )
+}
+
+
 const POS_ORDER = { GKP:0, DEF:1, MID:2, FWD:3 }
 const POS_COLORS = {
   GKP:'border-yellow-400 bg-yellow-400/10 text-yellow-400',
@@ -11,22 +56,7 @@ const POS_COLORS = {
   FWD:'border-red-400 bg-red-400/10 text-red-400',
 }
 
-function PitchPlayer({ p, selected, onClick }) {
-  return (
-    <div className={"flex flex-col items-center cursor-pointer group "+(selected?"scale-105":"")} onClick={()=>onClick(p)}>
-      <div className={"w-12 h-12 rounded-full border-2 flex items-center justify-center mb-1 relative transition-all group-hover:scale-110 "+POS_COLORS[p.pos]+(p.captain?" shadow-[0_0_12px_rgba(59,130,246,0.5)]":"")}>
-        <span className="text-xs font-bold text-white">{p.name.slice(0,3).toUpperCase()}</span>
-        {p.captain && <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white">C</div>}
-        {p.vice && <div className="absolute -top-1 -right-1 w-4 h-4 bg-gray-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white">V</div>}
-      </div>
-      <div className="bg-[#0F121D]/90 rounded px-2 py-0.5 text-center min-w-[56px]">
-        <p className="text-[11px] font-bold text-white truncate">{p.name.split(' ').pop()}</p>
-        <p className="text-[10px] text-blue-400 font-medium">{p.team}</p>
-        <p className="text-[10px] text-green-400 font-medium">{p.ppg} pts</p>
-      </div>
-    </div>
-  )
-}
+
 
 export default function MyTeam() {
   const { user } = useUser()
@@ -36,6 +66,7 @@ export default function MyTeam() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
+  const [photoMap, setPhotoMap] = useState({})
 
   const teamId = (user?.unsafeMetadata?.fplTeamId) || localStorage.getItem('fplTeamId')
 
@@ -169,25 +200,45 @@ export default function MyTeam() {
                 
               </div>
 
+              {/* Current Squad Note */}
+              <div className="flex items-center gap-2 px-1 py-2 rounded-xl mb-2" style={{background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)'}}>
+                <i className="fa-solid fa-circle-info text-yellow-400 text-sm flex-shrink-0"/>
+                <p className="text-yellow-300 text-xs">This is your <strong>current squad</strong> — not optimized. Run the <a href="/optimizer" className="underline font-bold">AI Optimizer</a> for transfer recommendations.</p>
+              </div>
               {/* Pitch */}
-              <div className="flex-1 rounded-xl overflow-hidden relative" style={{minHeight:'520px', background:'linear-gradient(180deg,#1a6e43 0%,#1d7a4a 50%,#1a6e43 100%)'}}>
-                <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                  <rect x="5" y="2" width="90" height="96" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
-                  <line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
-                  <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
-                  <rect x="30" y="2" width="40" height="15" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
-                  <rect x="30" y="83" width="40" height="15" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+              <div className="flex-1 relative rounded-2xl overflow-hidden" style={{
+                minHeight:'520px',
+                background:'rgba(255,255,255,0.03)',
+                border:'1px solid rgba(255,255,255,0.08)',
+                backdropFilter:'blur(12px)',
+                boxShadow:'0 8px 32px rgba(0,0,0,0.4)'
+              }}>
+                <div className="absolute inset-0" style={{
+                  backgroundImage:'linear-gradient(180deg,rgba(16,100,40,0.85) 0%,rgba(20,120,50,0.85) 25%,rgba(16,100,40,0.85) 50%,rgba(20,120,50,0.85) 75%,rgba(16,100,40,0.85) 100%)',
+                  backgroundSize:'100% 20%'
+                }}/>
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 520" preserveAspectRatio="none" style={{opacity:0.2}}>
+                  <rect x="10" y="10" width="380" height="500" fill="none" stroke="white" strokeWidth="2"/>
+                  <circle cx="200" cy="260" r="50" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <line x1="10" y1="260" x2="390" y2="260" stroke="white" strokeWidth="1.5"/>
+                  <rect x="100" y="10"  width="200" height="80" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <rect x="145" y="10"  width="110" height="40" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <rect x="100" y="430" width="200" height="80" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <rect x="145" y="470" width="110" height="40" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <circle cx="200" cy="260" r="3" fill="white"/>
                 </svg>
-                <div className="relative z-10 flex flex-col justify-between py-6 px-4 h-full">
-                  {[rowGKP, rowDEF, rowMID, rowFWD].map((row,ri) => (
-                    <div key={ri} className="flex justify-around w-full">
-                      {row.map(p => <PitchPlayer key={p.id} p={p} selected={selected?.id===p.id} onClick={setSelected}/>)}
-                    </div>
-                  ))}
-                  <div className="border-t border-dashed border-white/20 pt-4">
-                    <p className="text-center text-xs text-white/40 font-semibold tracking-widest uppercase mb-3">BENCH</p>
-                    <div className="flex justify-around w-full">
-                      {bench.map(p => <PitchPlayer key={p.id} p={p} selected={selected?.id===p.id} onClick={setSelected}/>)}
+                <div className="relative z-10 p-4 pt-6 pb-2 space-y-5 h-full flex flex-col justify-between">
+                  <div className="space-y-5">
+                    {[rowGKP, rowDEF, rowMID, rowFWD].map((row,ri) => (
+                      <div key={ri} className="flex justify-around w-full px-2">
+                        {row.map(p => <PlayerToken key={p.id} p={p} photoMap={photoMap} selected={selected?.id===p.id} onClick={setSelected}/>)}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mx-2 mb-2 rounded-xl p-3" style={{background:'rgba(0,0,0,0.35)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(8px)'}}>
+                    <p className="text-[10px] text-gray-400 text-center mb-3 uppercase tracking-widest">Bench</p>
+                    <div className="flex justify-around w-full px-4">
+                      {bench.map(p => <PlayerToken key={p.id} p={p} photoMap={photoMap} selected={selected?.id===p.id} onClick={setSelected}/>)}
                     </div>
                   </div>
                 </div>

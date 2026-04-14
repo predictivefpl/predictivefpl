@@ -4,7 +4,7 @@ import { useClerk, useUser } from '@clerk/clerk-react'
 const ADMIN_EMAIL = 'predictivefpl@outlook.com'
 const NAV = [
   { path: '/dashboard', icon: 'fa-chart-line', label: 'User Dashboard' },
-  { path: '/team', icon: 'fa-users', label: 'My Team & Planner' },
+  { path: '/team', icon: 'fa-users', label: 'My Current Squad' },
   { path: '/insights', icon: 'fa-brain', label: 'Insights & Models' },
 ]
 
