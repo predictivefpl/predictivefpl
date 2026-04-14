@@ -194,23 +194,32 @@ export default function OptimizerSettings() {
             <div className="glass-card rounded-2xl p-6 border border-green-500/30">
               <h2 className="text-lg font-bold mb-5 flex items-center gap-2">
                 <i className="fa-solid fa-robot text-green-400"/> AI Transfer Recommendations
-                {results.projected_gain != null && (
+                {(results.total_xp != null || results.projected_gain != null) && (
                   <span className="text-xs text-green-400 font-normal ml-2 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
-                    +{Number(results.projected_gain).toFixed(1)} xP gain
+                    +{Number(results.total_xp || results.projected_gain).toFixed(1)} xP
                   </span>
                 )}
               </h2>
-              {results.transfers && results.transfers.length > 0 ? (
+              {results.transfers && results.transfers.length > 0 ? (() => {
+                // Engine returns flat list: [{action:"out",...},{action:"in",...}]
+                // Pair them up into transfer pairs
+                const outs = results.transfers.filter(t => t.action === 'out')
+                const ins = results.transfers.filter(t => t.action === 'in')
+                const pairs = outs.map((o, i) => ({ out: o, in: ins[i] })).filter(p => p.out && p.in)
+                // If already paired format, handle that too
+                const transfers = pairs.length > 0 ? pairs : results.transfers.map((t,i,arr) => 
+                  i % 2 === 0 ? { out: t, in: arr[i+1] } : null).filter(Boolean)
+                return (
                 <div className="space-y-3 mb-6">
-                  {results.transfers.map((t, i) => (
+                  {transfers.map((pair, i) => (
                     <div key={i} className="flex items-center gap-4 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
                       <div className="flex-1 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
                           <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
                         </div>
                         <div>
-                          <p className="font-bold text-red-400">{t.transfer_out}</p>
-                          <p className="text-xs text-gray-500">Transfer Out{t.transfer_out_price?' \u2022 \u00a3'+Number(t.transfer_out_price).toFixed(1)+'m':''}</p>
+                          <p className="font-bold text-red-400">{pair.out?.name || pair.out?.player_id}</p>
+                          <p className="text-xs text-gray-500">Transfer Out{pair.out?.price ? ' • £'+Number(pair.out.price).toFixed(1)+'m' : ''}</p>
                         </div>
                       </div>
                       <i className="fa-solid fa-right-left text-gray-500"/>
@@ -219,30 +228,32 @@ export default function OptimizerSettings() {
                           <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
                         </div>
                         <div>
-                          <p className="font-bold text-green-400">{t.transfer_in}</p>
-                          <p className="text-xs text-gray-500">Transfer In{t.transfer_in_price?' \u2022 \u00a3'+Number(t.transfer_in_price).toFixed(1)+'m':''}</p>
+                          <p className="font-bold text-green-400">{pair.in?.name || pair.in?.player_id}</p>
+                          <p className="text-xs text-gray-500">Transfer In{pair.in?.price ? ' • £'+Number(pair.in.price).toFixed(1)+'m' : ''}</p>
                         </div>
                       </div>
-                      {t.xp_gain != null && (
+                      {pair.in?.xp_gw1 != null && (
                         <div className="text-right">
-                          <p className="text-sm font-bold text-white">+{Number(t.xp_gain).toFixed(1)}</p>
-                          <p className="text-xs text-gray-500">xP gain</p>
+                          <p className="text-sm font-bold text-white">+{Number(pair.in.xp_gw1).toFixed(1)}</p>
+                          <p className="text-xs text-gray-500">xP GW1</p>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
+                )
+              })()
               ) : (
                 <p className="text-gray-400 text-sm mb-4">No transfers recommended — your squad is already optimal for the selected settings!</p>
               )}
-              {results.recommended_squad && results.recommended_squad.length > 0 && (
+              {(results.recommended_squad || results.squad) && (results.recommended_squad || results.squad).length > 0 && (
                 <div>
                   <h3 className="text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">Recommended Squad</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {results.recommended_squad.filter(p => !p.bench).map((p, i) => (
+                    {(results.recommended_squad || results.squad).filter(p => p.is_starter !== false).slice(0,11).map((p, i) => (
                       <div key={i} className="bg-[#0F121D]/60 rounded-xl p-3 border border-gray-700/50">
                         <div className="flex justify-between items-start mb-1">
-                          <span className={"text-[10px] px-1.5 py-0.5 rounded font-bold "+(p.position==='GKP'?'bg-yellow-500/20 text-yellow-400':p.position==='DEF'?'bg-green-500/20 text-green-400':p.position==='MID'?'bg-blue-500/20 text-blue-400':'bg-red-500/20 text-red-400')}>
+                          <span className={"text-[10px] px-1.5 py-0.5 rounded font-bold "+(p.position==='GKP' || p.position==='G'?'bg-yellow-500/20 text-yellow-400':p.position==='DEF'?'bg-green-500/20 text-green-400':p.position==='MID'?'bg-blue-500/20 text-blue-400':'bg-red-500/20 text-red-400')}>
                             {p.position}
                           </span>
                           <span className="text-xs text-blue-400 font-medium">{p.price!=null?'\u00a3'+Number(p.price).toFixed(1)+'m':''}</span>
