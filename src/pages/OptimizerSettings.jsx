@@ -70,7 +70,114 @@ export default function OptimizerSettings() {
     setRunning(false)
   }
 
-  const renderStats = () => {
+  const renderChipAdvice = () => {
+    const chips = [
+      {
+        id: 'wildcard',
+        icon: 'fa-wand-magic-sparkles',
+        color: '#3b82f6',
+        label: 'Wildcard',
+        abbr: 'WC',
+        algorithm: (gw) => {
+          // Best: GW1-8 (early restructure), GW20-28 (mid-season reset), or after injury crisis
+          // Avoid: final 5 GWs (too late), BGW/DGW unknown
+          if (gw <= 8)  return { score: 90, reason: 'Early season — ideal to build an optimal template squad from scratch.' }
+          if (gw >= 20 && gw <= 28) return { score: 85, reason: 'Mid-season reset window. Strong DGW fixtures typically occur here.' }
+          if (gw >= 29 && gw <= 33) return { score: 70, reason: 'Acceptable — use before a Double Gameweek to maximise returns.' }
+          if (gw >= 34) return { score: 30, reason: 'Late season — limited GWs remaining to benefit from a full restructure.' }
+          return { score: 60, reason: 'Neutral window. Consider saving for a Double Gameweek.' }
+        }
+      },
+      {
+        id: 'freehit',
+        icon: 'fa-bolt',
+        color: '#10b981',
+        label: 'Free Hit',
+        abbr: 'FH',
+        algorithm: (gw) => {
+          // Best: Blank Gameweeks (typically GW16, GW19, FA Cup rounds)
+          // Common BGW windows: GW16-17, GW19, GW28-30
+          if (gw === 16 || gw === 17 || gw === 19) return { score: 95, reason: 'Classic Blank Gameweek window. Free Hit lets you field a full 11 from playing teams.' }
+          if (gw >= 28 && gw <= 30) return { score: 88, reason: 'FA Cup / international break blanks common here. Ideal Free Hit window.' }
+          if (gw >= 34 && gw <= 37) return { score: 75, reason: 'End-of-season blanks likely. Good time if 5+ teams are without a fixture.' }
+          return { score: 40, reason: 'Save for a confirmed Blank Gameweek when 5+ teams do not play.' }
+        }
+      },
+      {
+        id: 'benchboost',
+        icon: 'fa-chair',
+        color: '#f59e0b',
+        label: 'Bench Boost',
+        abbr: 'BB',
+        algorithm: (gw) => {
+          // Best: Double Gameweeks when bench players have 2 fixtures
+          // Requires strong bench — plan ahead by loading bench with DGW players
+          if (gw >= 29 && gw <= 36) return { score: 92, reason: 'Peak Double Gameweek territory. Use when your bench has 2 fixtures each — potential 30+ extra points.' }
+          if (gw >= 20 && gw <= 28) return { score: 75, reason: 'Early DGWs possible. Only use if bench has confirmed double fixtures.' }
+          return { score: 35, reason: 'Save for a Double Gameweek. Load your bench with DGW assets first for maximum gain.' }
+        }
+      },
+      {
+        id: 'triplecaptain',
+        icon: 'fa-crown',
+        color: '#a855f7',
+        label: 'Triple Captain',
+        abbr: 'TC',
+        algorithm: (gw) => {
+          // Best: DGW with premium captain (Salah, Haaland, Son) having 2 home fixtures
+          if (gw >= 29 && gw <= 36) return { score: 90, reason: 'Prime DGW window. Triple a premium asset (Haaland/Salah) with 2 home fixtures for 40+ point potential.' }
+          if (gw >= 20 && gw <= 28) return { score: 72, reason: 'Viable if your captain has a confirmed double. Check fixture difficulty first.' }
+          if (gw <= 8) return { score: 45, reason: 'Too early — save for a guaranteed Double Gameweek with a premium captain.' }
+          return { score: 50, reason: 'Only play on a Double Gameweek when your captain has 2 favourable fixtures.' }
+        }
+      },
+    ]
+
+    const gw = 32 // TODO: use live GW from engine status
+
+    return (
+      <div className="glass-card rounded-2xl p-6 border border-gray-700/50 mb-6">
+        <h2 className="text-base font-bold mb-1 flex items-center gap-2">
+          <i className="fa-solid fa-lightbulb text-yellow-400"/> Chip Timing Advisor
+        </h2>
+        <p className="text-gray-400 text-sm mb-5">AI-powered suggestions on when to play each chip based on current gameweek patterns.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {chips.map(chip => {
+            const { score, reason } = chip.algorithm(gw)
+            const barColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444'
+            const label = score >= 80 ? 'Play Soon' : score >= 60 ? 'Consider' : 'Hold'
+            return (
+              <div key={chip.id} className="bg-[#0F121D]/60 rounded-xl p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background: chip.color + '22', border: '1px solid ' + chip.color + '44'}}>
+                      <i className={'fa-solid ' + chip.icon} style={{color: chip.color, fontSize: 13}}/>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{chip.label}</p>
+                      <p className="text-[10px] font-bold uppercase" style={{color: barColor}}>{label}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black" style={{color: barColor}}>{score}</p>
+                    <p className="text-[10px] text-gray-500">/ 100</p>
+                  </div>
+                </div>
+                {/* Score bar */}
+                <div className="h-1.5 rounded-full bg-white/5 mb-3 overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{width: score + '%', background: barColor}}/>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">{reason}</p>
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-[10px] text-gray-600 mt-4">* Scores based on historical FPL patterns. Always check official fixture announcements before playing a chip.</p>
+      </div>
+    )
+  }
+
+    const renderStats = () => {
     if (!results || results.total_xp == null) return null
     const ts  = results.transfers || []
     const outs = ts.filter(t => t.action === 'out')
@@ -174,16 +281,16 @@ export default function OptimizerSettings() {
       const col     = posColor[p.position] || '#6b7280'
       const surname = p.name.includes('.') ? p.name.split('.').pop()?.trim() : p.name.split(' ').pop()
       return (
-        <div className="flex flex-col items-center gap-1" style={{minWidth:58}}>
-          <div className="relative" style={{width:52,height:52}}>
+        <div className="flex flex-col items-center gap-1" style={{minWidth:68}}>
+          <div className="relative" style={{width:62,height:62}}>
             {isNew && (
               <div className="absolute inset-0 rounded-full" style={{background:'radial-gradient(circle, ' + col + '44 0%, transparent 70%)', transform:'scale(1.4)'}}/>
             )}
             <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"
               style={{
-                borderColor: isNew ? col : 'rgba(255,255,255,0.2)',
+                borderColor: isNew ? col : 'rgba(255,255,255,0.25)',
                 background: 'linear-gradient(135deg, ' + col + '22, ' + col + '44)',
-                boxShadow: isNew ? '0 0 10px ' + col + '88' : '0 2px 8px rgba(0,0,0,0.5)'
+                boxShadow: isNew ? '0 0 14px ' + col + '99' : '0 2px 10px rgba(0,0,0,0.6)'
               }}>
               {imgUrl
                 ? <img src={imgUrl} alt={p.name} className="w-full h-full object-cover object-top" style={{transform:'scale(1.15) translateY(5px)'}} onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}/>
@@ -202,13 +309,13 @@ export default function OptimizerSettings() {
                 style={{background:col,boxShadow:'0 1px 4px ' + col + '88'}}>N</div>
             )}
           </div>
-          <div className="px-1.5 py-0.5 rounded-md text-center" style={{
+          <div className="px-2 py-0.5 rounded-md text-center" style={{
             background: isNew ? col + '28' : 'rgba(0,0,0,0.55)',
             border: '1px solid ' + (isNew ? col + '55' : 'rgba(255,255,255,0.1)'),
-            backdropFilter: 'blur(4px)', maxWidth:64
+            backdropFilter: 'blur(4px)', maxWidth:76
           }}>
-            <p className="font-bold text-white leading-tight" style={{fontSize:9,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{surname}</p>
-            {p.xp_gw1 != null && <p style={{fontSize:8, color: isNew ? col : '#9ca3af'}}>{p.xp_gw1.toFixed(1)} xP</p>}
+            <p className="font-bold text-white leading-tight" style={{fontSize:10,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{surname}</p>
+            {p.xp_gw1 != null && <p style={{fontSize:9, color: isNew ? col : '#9ca3af'}}>{p.xp_gw1.toFixed(1)} xP</p>}
           </div>
         </div>
       )
@@ -244,7 +351,7 @@ export default function OptimizerSettings() {
           </svg>
           <div className="relative z-10 p-4 pt-6 pb-4 space-y-5">
             {rows.map((row, ri) => row.length > 0 && (
-              <div key={ri} className="flex justify-center gap-2 flex-wrap">
+              <div key={ri} className="flex justify-around w-full px-2">
                 {row.map((p, pi) => <PlayerToken key={pi} p={p}/>)}
               </div>
             ))}
@@ -254,7 +361,7 @@ export default function OptimizerSettings() {
               background:'rgba(0,0,0,0.35)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(8px)'
             }}>
               <p className="text-[10px] text-gray-400 text-center mb-3 uppercase tracking-widest">Bench</p>
-              <div className="flex justify-center gap-4">
+              <div className="flex justify-around w-full px-4">
                 {bench.map((p, i) => <PlayerToken key={i} p={p}/>)}
               </div>
             </div>
@@ -291,6 +398,7 @@ export default function OptimizerSettings() {
           </div>
         </div>
         <main className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
+          {renderChipAdvice()}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="glass-card rounded-2xl p-6 border border-gray-700/50 md:col-span-2">
               <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-seedling text-green-400"/> Optimization Strategy</h2>

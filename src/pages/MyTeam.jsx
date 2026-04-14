@@ -36,7 +36,6 @@ export default function MyTeam() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
-  const [activeChip, setActiveChip] = useState(null)
 
   const teamId = (user?.unsafeMetadata?.fplTeamId) || localStorage.getItem('fplTeamId')
 
@@ -111,16 +110,10 @@ export default function MyTeam() {
   const rowFWD = starters.filter(p => p.pos==='FWD')
   const projectedPts = starters.reduce((sum,p) => {
     let pts = p.ppg
-    if (p.captain) pts *= activeChip==='tc' ? 3 : 2
+    if (p.captain) pts *= 2
     return sum + pts
   }, 0).toFixed(1)
 
-  const chips = [
-    { id:'wc', icon:'fa-wand-magic-sparkles', label:'Wildcard', color:'text-blue-400' },
-    { id:'fh', icon:'fa-bolt', label:'Free Hit', color:'text-green-400' },
-    { id:'bb', icon:'fa-chair', label:'Bench Boost', color:'text-yellow-400' },
-    { id:'tc', icon:'fa-crown', label:'Triple Capt', color:'text-purple-400' },
-  ]
 
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
@@ -234,28 +227,7 @@ export default function MyTeam() {
           {/* Right sidebar */}
           {!loading && !error && (
             <div className="w-72 flex-shrink-0 flex flex-col gap-4">
-              <div className="glass-card rounded-2xl p-4 border border-gray-700/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <i className="fa-solid fa-lightbulb text-yellow-400"/>
-                  <h4 className="text-sm font-bold">Chip Strategy</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="bg-[#0F121D] rounded-xl p-3 border border-blue-500/30">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <i className="fa-solid fa-wand-magic-sparkles text-blue-400 text-xs"/>
-                      <span className="text-blue-400 font-bold text-[10px] uppercase">Wildcard</span>
-                    </div>
-                    <p className="text-gray-300 text-[10px] leading-relaxed">Best used during a Double Gameweek to maximise template players.</p>
-                  </div>
-                  <div className="bg-[#0F121D] rounded-xl p-3 border border-gray-800">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <i className="fa-solid fa-bolt text-gray-500 text-xs"/>
-                      <span className="text-gray-400 font-bold text-[10px] uppercase">Free Hit</span>
-                    </div>
-                    <p className="text-gray-400 text-[10px] leading-relaxed">Save for a Blank Gameweek when 6+ teams do not play.</p>
-                  </div>
-                </div>
-              </div>
+
               <div className="glass-card rounded-2xl p-4 border border-gray-700/50 flex-1">
                 <h4 className="text-sm font-bold mb-3">Squad Stats</h4>
                 <div className="space-y-3">

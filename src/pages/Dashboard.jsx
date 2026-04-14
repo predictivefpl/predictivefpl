@@ -208,7 +208,7 @@ export default function Dashboard() {
                     <i className="fa-solid fa-robot text-blue-400"/> AI Command Center
                     {engineStatus?.predictions_cached && <span className="text-xs text-green-400 font-normal ml-2">(ML Powered)</span>}
                   </h2>
-                  <button onClick={() => navigate("/team")} className="neon-button rounded-xl py-3 px-5 font-bold text-sm flex items-center gap-2">
+                  <button onClick={() => navigate("/optimizer")} className="neon-button rounded-xl py-3 px-5 font-bold text-sm flex items-center gap-2">
                     <i className="fa-solid fa-sparkles"/> Optimize My Team
                   </button>
                 </div>
