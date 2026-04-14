@@ -68,34 +68,51 @@ export default function OptimizerSettings() {
 
   const renderTransfers = () => {
     if (!results) return null
-    const squad = results.squad || []
-    const currentIds = originalSquad
-    const newPlayers = squad.filter(p => !currentIds.includes(p.player_id))
-    if (newPlayers.length === 0) {
+    const ts = results.transfers || []
+    const outs = ts.filter(t => t.action === 'out')
+    const ins = ts.filter(t => t.action === 'in')
+    if (outs.length === 0) {
       return <p className="text-gray-400 text-sm mb-4">No transfers needed — squad is already optimal!</p>
     }
     return (
       <div className="space-y-3 mb-6">
-        {newPlayers.map((p, i) => (
-          <div key={i} className="flex items-center gap-4 p-4 bg-[#0F121D]/80 rounded-xl border border-green-500/30">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
-              <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
+        {outs.map((out, i) => {
+          const tin = ins[i]
+          return (
+            <div key={i} className="flex items-center gap-3 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
+              <div className="flex-1 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
+                </div>
+                <div>
+                  <p className="font-bold text-red-400">{out.name}</p>
+                  <p className="text-xs text-gray-500">OUT · £{Number(out.price).toFixed(1)}m</p>
+                </div>
+              </div>
+              <i className="fa-solid fa-right-left text-gray-500 text-sm flex-shrink-0"/>
+              <div className="flex-1 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
+                  <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
+                </div>
+                <div>
+                  <p className="font-bold text-green-400">{tin ? tin.name : '—'}</p>
+                  <p className="text-xs text-gray-500">IN · £{tin ? Number(tin.price).toFixed(1) : '?'}m</p>
+                </div>
+              </div>
+              {tin && tin.xp_gw1 != null && (
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-white">{Number(tin.xp_gw1).toFixed(1)} xP</p>
+                  <p className="text-xs text-gray-500">next GW</p>
+                </div>
+              )}
             </div>
-            <div className="flex-1">
-              <p className="font-bold text-green-400">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.position} • {p.team_short} • £{Number(p.price).toFixed(1)}m</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-white">{Number(p.xp_gw1).toFixed(1)} xP</p>
-              <p className="text-xs text-gray-500">next GW</p>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     )
   }
 
-  const renderSquad = () => {
+    const renderSquad = () => {
     if (!results) return null
     const squad = (results.squad || []).filter(p => p.is_starter !== false).slice(0, 11)
     if (squad.length === 0) return null
