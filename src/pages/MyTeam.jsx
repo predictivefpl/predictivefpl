@@ -95,7 +95,9 @@ export default function MyTeam() {
       const picks = await fetch(url('/entry/' + id + '/event/' + gw + '/picks/')).then(r => { if(!r.ok) throw new Error('Picks failed'); return r.json() })
 
       const playerMap = {}
-      bootstrap.elements.forEach(p => { playerMap[p.id] = p })
+      const pMap = {}
+        bootstrap.elements.forEach(p => { playerMap[p.id] = p; if (p.photo) pMap[p.id] = p.photo.replace('.jpg','') })
+        setPhotoMap(pMap)
       const teamMap = {}
       bootstrap.teams.forEach(t => { teamMap[t.id] = t.short_name })
 
