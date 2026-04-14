@@ -7,7 +7,9 @@ const getLS = (key, fallback) => {
   catch { return fallback }
 }
 
-const ENGINE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://web-production-21545.up.railway.app'
+const ENGINE_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : 'https://web-production-21545.up.railway.app'
 
 export default function OptimizerSettings() {
   const { user } = useUser()
@@ -19,7 +21,6 @@ export default function OptimizerSettings() {
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
-
   const teamId = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')
 
   useEffect(() => {
@@ -31,19 +32,12 @@ export default function OptimizerSettings() {
   }, [strategy, transfers, activeChip, horizon, objective])
 
   const runOptimiser = async () => {
-    if (!teamId) { setError('No FPL Team ID found. Go to Settings to connect your team.'); return }
-    setRunning(true)
-    setError('')
-    setResults(null)
+    if (!teamId) { setError('No FPL Team ID found.'); return }
+    setRunning(true); setError(''); setResults(null)
     try {
       const isLocal = window.location.hostname === 'localhost'
-      const fplBase = isLocal ? '/fpl' : '/api/fpl?path='
-      const fplUrl = (path) => isLocal ? fplBase + path : fplBase + encodeURIComponent(path)
-
-      const [bootstrap, entry] = await Promise.all([
-        fetch(fplUrl('/bootstrap-static/')).then(r => r.json()),
-        fetch(fplUrl('/entry/' + teamId + '/')).then(r => r.json()),
-      ])
+      const fplUrl = (path) => isLocal ? '/fpl' + path : '/api/fpl?path=' + encodeURIComponent(path)
+      const bootstrap = await fetch(fplUrl('/bootstrap-static/')).then(r => r.json())
       const events = bootstrap.events || []
       const currentEvent = events.find(e => e.is_current) || events.find(e => e.is_next) || events[events.length - 1]
       const gw = currentEvent?.id || 1
@@ -51,7 +45,6 @@ export default function OptimizerSettings() {
       const squadIds = picks.picks.map(p => p.element)
       const bank = picks.entry_history.bank / 10
       const teamValue = picks.entry_history.value / 10
-
       const payload = {
         budget: teamValue + bank,
         num_transfers: activeChip ? 15 : transfers,
@@ -66,12 +59,64 @@ export default function OptimizerSettings() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Engine returned ' + res.status)
-      const data = await res.json()
-      setResults(data)
-    } catch (e) {
-      setError('Optimiser failed: ' + e.message)
-    }
+      setResults(await res.json())
+    } catch (e) { setError('Optimiser failed: ' + e.message) }
     setRunning(false)
+  }
+
+  const renderTransfers = () => {
+    if (!results) return null
+    const squad = results.squad || []
+    const currentIds = results.current_squad_ids || []
+    const newPlayers = squad.filter(p => !currentIds.includes(p.player_id))
+    if (newPlayers.length === 0) {
+      return <p className="text-gray-400 text-sm mb-4">No transfers needed — squad is already optimal!</p>
+    }
+    return (
+      <div className="space-y-3 mb-6">
+        {newPlayers.map((p, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 bg-[#0F121D]/80 rounded-xl border border-green-500/30">
+            <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+              <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-green-400">{p.name}</p>
+              <p className="text-xs text-gray-500">{p.position} • {p.team_short} • £{Number(p.price).toFixed(1)}m</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{Number(p.xp_gw1).toFixed(1)} xP</p>
+              <p className="text-xs text-gray-500">next GW</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const renderSquad = () => {
+    if (!results) return null
+    const squad = (results.squad || []).filter(p => p.is_starter !== false).slice(0, 11)
+    if (squad.length === 0) return null
+    return (
+      <div>
+        <h3 className="text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">Recommended Starting XI</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {squad.map((p, i) => (
+            <div key={i} className="bg-[#0F121D]/60 rounded-xl p-3 border border-gray-700/50">
+              <div className="flex justify-between items-start mb-1">
+                <span className={'text-[10px] px-1.5 py-0.5 rounded font-bold ' + (p.position === 'GKP' ? 'bg-yellow-500/20 text-yellow-400' : p.position === 'DEF' ? 'bg-green-500/20 text-green-400' : p.position === 'MID' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400')}>
+                  {p.position}
+                </span>
+                <span className="text-xs text-blue-400 font-medium">{p.price != null ? '\u00a3' + Number(p.price).toFixed(1) + 'm' : ''}</span>
+              </div>
+              <p className="text-sm font-bold text-white truncate">{p.name}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{p.team_short}{p.xp_gw1 != null ? ' \u2022 ' + Number(p.xp_gw1).toFixed(1) + ' xP' : ''}</p>
+              {p.is_captain && <span className="text-[9px] bg-blue-500 text-white px-1 rounded font-bold mt-1 inline-block">C</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   const strategies = [
@@ -100,7 +145,7 @@ export default function OptimizerSettings() {
             <span className="text-xl font-bold text-green-400">PredictorAI</span>
           </div>
         </div>
-        <main className="flex-1 overflow-y-auto custom-scroll p-8 max-w-5xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="glass-card rounded-2xl p-6 border border-gray-700/50 md:col-span-2">
               <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-seedling text-green-400"/> Optimization Strategy</h2>
@@ -108,7 +153,7 @@ export default function OptimizerSettings() {
               <div className="grid grid-cols-3 gap-4">
                 {strategies.map(s => (
                   <button key={s.key} onClick={() => setStrategy(s.key)}
-                    className={"p-4 rounded-xl border text-left transition-all "+(strategy===s.key?'border-green-400 bg-green-400/10':'border-gray-700/50 bg-white/5 hover:border-gray-500')}>
+                    className={'p-4 rounded-xl border text-left transition-all ' + (strategy === s.key ? 'border-green-400 bg-green-400/10' : 'border-gray-700/50 bg-white/5 hover:border-gray-500')}>
                     <p className="font-bold text-white mb-1">{s.label}</p>
                     <p className="text-xs text-gray-400">{s.desc}</p>
                   </button>
@@ -121,12 +166,12 @@ export default function OptimizerSettings() {
               <div className="flex gap-3">
                 {[0,1,2,3,4,5].map(n => (
                   <button key={n} onClick={() => setTransfers(n)}
-                    className={"w-10 h-10 rounded-full font-bold text-sm transition-all border "+(transfers===n&&!activeChip?'border-green-400 text-green-400 bg-green-400/10':'border-gray-700 text-gray-400 hover:border-gray-500')}>
+                    className={'w-10 h-10 rounded-full font-bold text-sm transition-all border ' + (transfers === n && !activeChip ? 'border-green-400 text-green-400 bg-green-400/10' : 'border-gray-700 text-gray-400 hover:border-gray-500')}>
                     {n}
                   </button>
                 ))}
               </div>
-              {activeChip && <p className="text-xs text-green-400 mt-3"><i className="fa-solid fa-info-circle mr-1"/>{activeChip==='wildcard'?'Wildcard':'Free Hit'} overrides transfer count</p>}
+              {activeChip && <p className="text-xs text-green-400 mt-3"><i className="fa-solid fa-info-circle mr-1"/>{activeChip === 'wildcard' ? 'Wildcard' : 'Free Hit'} overrides transfer count</p>}
             </div>
             <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
               <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-microchip text-green-400"/> Active Chips</h2>
@@ -138,9 +183,9 @@ export default function OptimizerSettings() {
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-400/10 text-green-400 border border-green-400/20">{chip.abbr}</span>
                       <span className="text-sm text-white font-medium">{chip.label}</span>
                     </div>
-                    <button onClick={() => setActiveChip(activeChip===chip.key?null:chip.key)}
-                      className={"w-12 h-6 rounded-full relative transition-colors duration-200 "+(activeChip===chip.key?'bg-green-400':'bg-gray-700')}>
-                      <div className={"w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 "+(activeChip===chip.key?'right-0.5':'left-0.5')}/>
+                    <button onClick={() => setActiveChip(activeChip === chip.key ? null : chip.key)}
+                      className={'w-12 h-6 rounded-full relative transition-colors duration-200 ' + (activeChip === chip.key ? 'bg-green-400' : 'bg-gray-700')}>
+                      <div className={'w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 ' + (activeChip === chip.key ? 'right-0.5' : 'left-0.5')}/>
                     </button>
                   </div>
                 ))}
@@ -153,7 +198,7 @@ export default function OptimizerSettings() {
               </div>
               <p className="text-gray-400 text-sm mb-5">How far ahead should the AI look?</p>
               <input type="range" min="1" max="8" value={horizon} onChange={e => setHorizon(Number(e.target.value))} className="w-full accent-green-400"/>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">{[1,2,3,4,5,6,7,8].map(n=><span key={n}>{n}</span>)}</div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">{[1,2,3,4,5,6,7,8].map(n => <span key={n}>{n}</span>)}</div>
             </div>
             <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
               <h2 className="text-base font-bold mb-1 flex items-center gap-2"><i className="fa-solid fa-bullseye text-green-400"/> Optimization Objective</h2>
@@ -161,9 +206,9 @@ export default function OptimizerSettings() {
               <div className="space-y-2">
                 {objectives.map(o => (
                   <button key={o.key} onClick={() => setObjective(o.key)}
-                    className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all "+(objective===o.key?'border-green-400 bg-green-400/10 text-white':'border-gray-700 bg-white/5 text-gray-400 hover:border-gray-500')}>
-                    <div className={"w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 "+(objective===o.key?'border-green-400':'border-gray-600')}>
-                      {objective===o.key&&<div className="w-2 h-2 rounded-full bg-green-400"/>}
+                    className={'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ' + (objective === o.key ? 'border-green-400 bg-green-400/10 text-white' : 'border-gray-700 bg-white/5 text-gray-400 hover:border-gray-500')}>
+                    <div className={'w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ' + (objective === o.key ? 'border-green-400' : 'border-gray-600')}>
+                      {objective === o.key && <div className="w-2 h-2 rounded-full bg-green-400"/>}
                     </div>
                     <span className="text-sm font-medium">{o.label}</span>
                   </button>
@@ -171,101 +216,35 @@ export default function OptimizerSettings() {
               </div>
             </div>
           </div>
-
           <div className="glass-card rounded-2xl p-6 border border-gray-700/50 mb-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="font-bold text-white mb-1">Ready to Optimize</p>
                 <p className="text-sm text-gray-400">
-                  {activeChip?(activeChip==='wildcard'?'Wildcard':'Free Hit')+' chip':transfers+' transfer'+(transfers!==1?'s':'')}
-                  {' \u2022 '}{strategies.find(s=>s.key===strategy)?.label}
+                  {activeChip ? (activeChip === 'wildcard' ? 'Wildcard' : 'Free Hit') + ' chip' : transfers + ' transfer' + (transfers !== 1 ? 's' : '')}
+                  {' \u2022 '}{strategies.find(s => s.key === strategy)?.label}
                   {' \u2022 '}{horizon} GW horizon
                 </p>
               </div>
               <button onClick={runOptimiser} disabled={running}
                 className="bg-green-500 hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl px-8 py-3 font-bold text-sm flex items-center gap-2 text-black transition-colors">
-                {running?<><i className="fa-solid fa-spinner fa-spin"/> Running AI...</>:<><i className="fa-solid fa-play"/> Save Configuration &amp; Run Optimizer</>}
+                {running ? <><i className="fa-solid fa-spinner fa-spin"/> Running AI...</> : <><i className="fa-solid fa-play"/> Save Configuration &amp; Run Optimizer</>}
               </button>
             </div>
             {error && <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"><i className="fa-solid fa-triangle-exclamation mr-2"/>{error}</div>}
           </div>
-
           {results && (
             <div className="glass-card rounded-2xl p-6 border border-green-500/30">
               <h2 className="text-lg font-bold mb-5 flex items-center gap-2">
                 <i className="fa-solid fa-robot text-green-400"/> AI Transfer Recommendations
-                {(results.total_xp != null || results.projected_gain != null) && (
+                {results.total_xp != null && (
                   <span className="text-xs text-green-400 font-normal ml-2 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
-                    +{Number(results.total_xp || results.projected_gain).toFixed(1)} xP
+                    {Number(results.total_xp).toFixed(1)} total xP
                   </span>
                 )}
               </h2>
-              {results.transfers && results.transfers.length > 0 ? (() => {
-                // Engine returns flat list: [{action:"out",...},{action:"in",...}]
-                // Pair them up into transfer pairs
-                const outs = results.transfers.filter(t => t.action === 'out')
-                const ins = results.transfers.filter(t => t.action === 'in')
-                const pairs = outs.map((o, i) => ({ out: o, in: ins[i] })).filter(p => p.out && p.in)
-                // If already paired format, handle that too
-                const transfers = pairs.length > 0 ? pairs : results.transfers.map((t,i,arr) => 
-                  i % 2 === 0 ? { out: t, in: arr[i+1] } : null).filter(Boolean)
-                return (
-                <div className="space-y-3 mb-6">
-                  {transfers.map((pair, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 bg-[#0F121D]/80 rounded-xl border border-gray-700/50">
-                      <div className="flex-1 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center">
-                          <i className="fa-solid fa-arrow-up text-red-400 text-xs"/>
-                        </div>
-                        <div>
-                          <p className="font-bold text-red-400">{pair.out?.name || pair.out?.player_id}</p>
-                          <p className="text-xs text-gray-500">Transfer Out{pair.out?.price ? ' • £'+Number(pair.out.price).toFixed(1)+'m' : ''}</p>
-                        </div>
-                      </div>
-                      <i className="fa-solid fa-right-left text-gray-500"/>
-                      <div className="flex-1 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
-                          <i className="fa-solid fa-arrow-down text-green-400 text-xs"/>
-                        </div>
-                        <div>
-                          <p className="font-bold text-green-400">{pair.in?.name || pair.in?.player_id}</p>
-                          <p className="text-xs text-gray-500">Transfer In{pair.in?.price ? ' • £'+Number(pair.in.price).toFixed(1)+'m' : ''}</p>
-                        </div>
-                      </div>
-                      {pair.in?.xp_gw1 != null && (
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-white">+{Number(pair.in.xp_gw1).toFixed(1)}</p>
-                          <p className="text-xs text-gray-500">xP GW1</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                )
-              })()
-              ) : (
-                <p className="text-gray-400 text-sm mb-4">No transfers recommended — your squad is already optimal for the selected settings!</p>
-              )}
-              {(results.recommended_squad || results.squad) && (results.recommended_squad || results.squad).length > 0 && (
-                <div>
-                  <h3 className="text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">Recommended Squad</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {(results.recommended_squad || results.squad).filter(p => p.is_starter !== false).slice(0,11).map((p, i) => (
-                      <div key={i} className="bg-[#0F121D]/60 rounded-xl p-3 border border-gray-700/50">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className={"text-[10px] px-1.5 py-0.5 rounded font-bold "+(p.position==='GKP' || p.position==='G'?'bg-yellow-500/20 text-yellow-400':p.position==='DEF'?'bg-green-500/20 text-green-400':p.position==='MID'?'bg-blue-500/20 text-blue-400':'bg-red-500/20 text-red-400')}>
-                            {p.position}
-                          </span>
-                          <span className="text-xs text-blue-400 font-medium">{p.price!=null?'\u00a3'+Number(p.price).toFixed(1)+'m':''}</span>
-                        </div>
-                        <p className="text-sm font-bold text-white truncate">{p.name}</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">{p.team}{p.xp!=null?' \u2022 '+Number(p.xp).toFixed(1)+' xP':''}</p>
-                        {p.captain&&<span className="text-[9px] bg-blue-500 text-white px-1 rounded font-bold mt-1 inline-block">C</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {renderTransfers()}
+              {renderSquad()}
             </div>
           )}
         </main>
