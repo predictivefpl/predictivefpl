@@ -6,6 +6,7 @@ const NAV = [
   { path: '/dashboard', icon: 'fa-chart-line', label: 'User Dashboard' },
   { path: '/team', icon: 'fa-users', label: 'My Current Squad' },
   { path: '/insights', icon: 'fa-brain', label: 'Insights & Models' },
+  { path: '/rivals',   icon: 'fa-trophy', label: 'Rivals' },
 ]
 
 export default function Sidebar() {

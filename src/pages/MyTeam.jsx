@@ -67,6 +67,7 @@ export default function MyTeam() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
   const [photoMap, setPhotoMap] = useState({})
+  const [photoMap, setPhotoMap] = useState({})
 
   const teamId = (user?.unsafeMetadata?.fplTeamId) || localStorage.getItem('fplTeamId')
 

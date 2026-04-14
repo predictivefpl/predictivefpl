@@ -8,6 +8,7 @@ import MyTeam from './pages/MyTeam'
 import Insights from './pages/Insights'
 import AdminConsole from './pages/AdminConsole'
 import OptimizerSettings from './pages/OptimizerSettings'
+import Rivals from './pages/Rivals'
 import Settings from './pages/Settings'
 
 function ProtectedRoute({ children }) {
