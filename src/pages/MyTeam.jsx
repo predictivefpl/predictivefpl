@@ -202,8 +202,7 @@ export default function MyTeam() {
 
               {/* Current Squad Note */}
               <div className="flex items-center gap-2 px-1 py-2 rounded-xl mb-2" style={{background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)'}}>
-                <i className="fa-solid fa-circle-info text-yellow-400 text-sm flex-shrink-0"/>
-                <p className="text-yellow-300 text-xs">This is your <strong>current squad</strong> — not optimized. Run the <a href="/optimizer" className="underline font-bold">AI Optimizer</a> for transfer recommendations.</p>
+                <p className="text-yellow-300 text-xs text-center w-full">This is your <strong>current squad</strong> — not optimized. Run the <a href="/optimizer" className="underline font-bold">AI Optimizer</a> for transfer recommendations.</p>
               </div>
               {/* Pitch */}
               <div className="flex-1 relative rounded-2xl overflow-hidden" style={{

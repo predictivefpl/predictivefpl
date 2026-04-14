@@ -29,7 +29,8 @@ export default function App() {
         <Route path="/team" element={<ProtectedRoute><MyTeam /></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
-        <Route path="/optimizer" element={<ProtectedRoute><OptimizerSettings /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/optimizer" element={<ProtectedRoute><OptimizerSettings /></ProtectedRoute>} />
+        <Route path="/rivals" element={<ProtectedRoute><Rivals /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
