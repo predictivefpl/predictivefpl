@@ -66,7 +66,46 @@ export default function OptimizerSettings() {
     setRunning(false)
   }
 
-  const renderTransfers = () => {
+  const renderStats = () => {
+    if (!results || results.total_xp == null) return null
+    const ts = results.transfers || []
+    const outs = ts.filter(t => t.action === 'out')
+    const ins  = ts.filter(t => t.action === 'in')
+    const squadMap = {}
+    ;(results.squad || []).forEach(p => { squadMap[p.player_id] = p })
+    const totalGain = outs.reduce((acc, out, i) => {
+      const tin = ins[i]
+      const outXp = squadMap[out.player_id]?.xp_gw1 || 0
+      const inXp  = tin ? (squadMap[tin.player_id]?.xp_gw1 || tin.xp_gw1 || 0) : 0
+      return acc + (inXp - outXp)
+    }, 0)
+    return (
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="bg-[#0F121D]/60 rounded-xl p-3 border border-green-400/20 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-green-400/10 flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-arrow-trend-up text-green-400"/>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">xP Gain This GW</p>
+            <p className={`text-lg font-black ${totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {totalGain >= 0 ? '+' : ''}{totalGain.toFixed(1)} pts
+            </p>
+          </div>
+        </div>
+        <div className="bg-[#0F121D]/60 rounded-xl p-3 border border-blue-400/20 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-400/10 flex items-center justify-center flex-shrink-0">
+            <i className="fa-solid fa-star text-blue-400"/>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Total Squad xP</p>
+            <p className="text-lg font-black text-blue-400">{Number(results.total_xp).toFixed(1)} pts</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+    const renderTransfers = () => {
     if (!results) return null
     const ts = results.transfers || []
     const outs = ts.filter(t => t.action === 'out')
@@ -313,14 +352,10 @@ export default function OptimizerSettings() {
           </div>
           {results && (
             <div className="glass-card rounded-2xl p-6 border border-green-500/30">
-              <h2 className="text-lg font-bold mb-5 flex items-center gap-2">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <i className="fa-solid fa-robot text-green-400"/> AI Transfer Recommendations
-                {results.total_xp != null && (
-                  <span className="text-xs text-green-400 font-normal ml-2 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
-                    {Number(results.total_xp).toFixed(1)} total xP
-                  </span>
-                )}
               </h2>
+              {renderStats()}
               {renderTransfers()}
               {renderSquad()}
             </div>
