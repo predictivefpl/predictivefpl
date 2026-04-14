@@ -302,7 +302,7 @@ export default function Dashboard() {
                 <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">Quick Actions</h3>
                 <div className="space-y-3">
                   <button onClick={() => navigate("/team")} className="w-full neon-button rounded-xl py-4 px-4 font-bold text-sm flex justify-between items-center">
-                    <span className="flex items-center gap-2"><i className="fa-solid fa-users text-lg"/> Squad Planner</span>
+                    <span className="flex items-center gap-2"><i className="fa-solid fa-robot text-lg"/> Run Optimizer</span>
                     <i className="fa-solid fa-arrow-right"/>
                   </button>
                   <button onClick={() => navigate("/insights")} className="w-full bg-[#1A1D2E] hover:bg-[#252A3F] text-white rounded-xl py-4 px-4 font-bold text-sm flex justify-between items-center border border-gray-700 transition-colors">
