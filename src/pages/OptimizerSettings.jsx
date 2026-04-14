@@ -20,6 +20,7 @@ export default function OptimizerSettings() {
   const [objective, setObjective] = useState(getLS('opt_objective', 'total_points'))
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState(null)
+  const [originalSquad, setOriginalSquad] = useState([])
   const [error, setError] = useState('')
   const teamId = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')
 
@@ -59,6 +60,7 @@ export default function OptimizerSettings() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Engine returned ' + res.status)
+      setOriginalSquad(squadIds)
       setResults(await res.json())
     } catch (e) { setError('Optimiser failed: ' + e.message) }
     setRunning(false)
@@ -67,7 +69,7 @@ export default function OptimizerSettings() {
   const renderTransfers = () => {
     if (!results) return null
     const squad = results.squad || []
-    const currentIds = results.current_squad_ids || []
+    const currentIds = originalSquad
     const newPlayers = squad.filter(p => !currentIds.includes(p.player_id))
     if (newPlayers.length === 0) {
       return <p className="text-gray-400 text-sm mb-4">No transfers needed — squad is already optimal!</p>
