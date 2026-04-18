@@ -113,7 +113,7 @@ async def run_full_pipeline():
         features_df,feature_cols = build_feature_matrix(history_df,fixtures_df,teams_df,players_df)
         trained = train_models(features_df,feature_cols)
         pred_features,_ = build_feature_matrix(history_df,fixtures_df,teams_df,players_df,target_gw=current_gw)
-        preds_df = predict_xp(pred_features,players_df,fixtures_df[fixtures_df["gw"]==current_gw],trained)
+        preds_df = predict_xp(pred_features,players_df,fixtures_df[fixtures_df["gw"]==current_gw],trained,full_fixtures_df=fixtures_df,current_gw=current_gw)
         preds_list = preds_df.to_dict(orient="records")
         for row in preds_list:
             for k,v in row.items():
