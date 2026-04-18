@@ -188,14 +188,13 @@ export default function AdminConsole() {
                 <i className="fa-solid fa-robot text-green-400"/> ML Engine
               </h3>
               <div className="space-y-2">
-                {engineStatus ? [
-                  ['Status',         engineStatus.status || '—'],
-                  ['Current GW',     engineStatus.current_gw || '—'],
-                  ['Training',       engineStatus.training_status || '—'],
-                  ['Last Updated',   engineStatus.last_updated ? new Date(engineStatus.last_updated).toLocaleDateString() : '—'],
-                  ['Last Sync',      lastSync || 'Pending...'],
-                ] : [['Loading...','—']].concat([['',''],['',''],['',''],['','']]).map(x=>x)}
-                .map(([l, v]) => (
+                {(engineStatus ? [
+                  ['Status',       engineStatus.status || '—'],
+                  ['Current GW',   engineStatus.current_gw || '—'],
+                  ['Training',     engineStatus.training_status || '—'],
+                  ['Last Updated', engineStatus.last_updated ? new Date(engineStatus.last_updated).toLocaleDateString() : '—'],
+                  ['Last Sync',    lastSync || 'Pending...'],
+                ] : [['Loading...', '—']]).map(([l, v]) => (
                   <div key={l} className="flex justify-between items-center p-2.5 bg-[#0F121D]/50 rounded-xl">
                     <span className="text-xs text-gray-400">{l}</span>
                     <span className="text-xs font-bold text-white">{v}</span>
