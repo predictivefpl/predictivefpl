@@ -7,7 +7,7 @@ const ORACLE_URL  = window.location.hostname === 'localhost'
   ? 'http://localhost:8001'
   : 'https://YOUR-NEW-RAILWAY-URL.up.railway.app'   // update once deployed
 
-const ADMIN_EMAIL = 'predictivefpl@outlook.com'
+const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 const FPL_URL     = (path) => '/api/fpl?path=' + encodeURIComponent(path)
 
 const POS_COLOR = { GKP:'#f59e0b', DEF:'#10b981', MID:'#3b82f6', FWD:'#ef4444' }
@@ -76,7 +76,7 @@ function PlayerToken({ p, photoMap = {}, highlight = false }) {
 export default function OracleOptimizer() {
   const { user } = useUser()
   const navigate = useNavigate()
-  const isAdmin  = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL
+  const isAdmin  = ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress)
 
   const [status, setStatus]         = useState(null)
   const [photoMap, setPhotoMap]      = useState({})
