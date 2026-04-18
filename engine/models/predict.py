@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 
-XGB_WEIGHT = 0.50
-RF_WEIGHT  = 0.30
+XGB_WEIGHT   = 0.50
+RF_WEIGHT    = 0.30
 RIDGE_WEIGHT = 0.20
-GW_DECAY = {1: 1.00, 2: 0.85, 3: 0.72}
+GW_DECAY     = {1: 1.00, 2: 0.85, 3: 0.72}
 FDR_MULTIPLIER = {1: 1.12, 2: 1.06, 3: 1.00, 4: 0.94, 5: 0.88}
 
 
@@ -13,59 +13,50 @@ def load_models():
     MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
     try:
         return {
-            "xgb":         joblib.load(os.path.join(MODEL_DIR, "xgb_model.pkl")),
-            "rf":          joblib.load(os.path.join(MODEL_DIR, "rf_model.pkl")),
-            "ridge":       joblib.load(os.path.join(MODEL_DIR, "ridge_model.pkl")),
-            "scaler":      joblib.load(os.path.join(MODEL_DIR, "scaler.pkl")),
-            "feature_cols":joblib.load(os.path.join(MODEL_DIR, "feature_cols.pkl")),
+            "xgb":          joblib.load(os.path.join(MODEL_DIR, "xgb_model.pkl")),
+            "rf":           joblib.load(os.path.join(MODEL_DIR, "rf_model.pkl")),
+            "ridge":        joblib.load(os.path.join(MODEL_DIR, "ridge_model.pkl")),
+            "scaler":       joblib.load(os.path.join(MODEL_DIR, "scaler.pkl")),
+            "feature_cols": joblib.load(os.path.join(MODEL_DIR, "feature_cols.pkl")),
         }
     except FileNotFoundError:
         return None
 
 
-def _team_fixture_count(fixtures_df, team_id, gw):
-    """Return how many fixtures a team plays in a given GW (0=BGW, 1=normal, 2=DGW)."""
+def _fixture_counts_for_gw(fixtures_df, gw):
+    """
+    Returns dict {team_id: fixture_count} for the given GW.
+    0 = blank, 1 = normal, 2 = double gameweek.
+    Handles both raw FPL column names (event/team_h/team_a) and renamed versions (gw/home_team/away_team).
+    """
     if fixtures_df is None or fixtures_df.empty:
-        return 1  # assume normal if no data
-    # Handle both raw FPL column names and renamed versions
-    gw_col  = "gw"    if "gw"    in fixtures_df.columns else "event"
-    h_col   = "team_h" if "team_h" in fixtures_df.columns else "home_team"
-    a_col   = "team_a" if "team_a" in fixtures_df.columns else "away_team"
+        return {}
+
+    gw_col = "gw"    if "gw"     in fixtures_df.columns else "event"
+    h_col  = "team_h" if "team_h" in fixtures_df.columns else "home_team"
+    a_col  = "team_a" if "team_a" in fixtures_df.columns else "away_team"
+
     if gw_col not in fixtures_df.columns:
-        return 1
-    mask = (
-        (fixtures_df[gw_col] == gw) &
-        ((fixtures_df[h_col] == team_id) | (fixtures_df[a_col] == team_id))
-    )
-    return int(mask.sum())
+        return {}
 
-
-def _build_fixture_multiplier(fixtures_df, players_df, current_gw, offset):
-    """
-    Build a Series (indexed by player_id) of fixture multipliers for current_gw + offset.
-    offset=1 → next GW (xp_gw2 in the 3-GW horizon), offset=2 → GW after that (xp_gw3).
-    Returns multiplier: 0 for BGW, 1 for normal, 2 for DGW.
-    """
-    target_gw = current_gw + offset
-    if fixtures_df is None or fixtures_df.empty or "team_id" not in players_df.columns:
-        return pd.Series(1.0, index=players_df["player_id"])
-
-    pid_to_team = players_df.set_index("player_id")["team_id"].to_dict()
-    multipliers = {
-        pid: _team_fixture_count(fixtures_df, team_id, target_gw)
-        for pid, team_id in pid_to_team.items()
-    }
-    return pd.Series(multipliers)
+    gw_fixtures = fixtures_df[fixtures_df[gw_col] == gw]
+    counts = {}
+    for _, row in gw_fixtures.iterrows():
+        for col in [h_col, a_col]:
+            tid = row.get(col)
+            if tid is not None and not pd.isna(tid):
+                tid = int(tid)
+                counts[tid] = counts.get(tid, 0) + 1
+    return counts
 
 
 def predict_xp(features_df, players_df, upcoming_fixtures=None, models=None,
                gw_horizons=3, full_fixtures_df=None, current_gw=None):
     """
-    Predict xP for each player.
+    Predict xP for each player with full DGW / BGW awareness.
 
-    full_fixtures_df : the complete fixtures DataFrame (all GWs) — used to
-                       correctly weight DGW/BGW players for future gameweeks.
-    current_gw       : integer, the GW being predicted for.
+    full_fixtures_df : complete fixtures DataFrame (all GWs)
+    current_gw       : the GW being predicted
     """
     if models is None:
         models = load_models()
@@ -78,64 +69,75 @@ def predict_xp(features_df, players_df, upcoming_fixtures=None, models=None,
     xgb_p   = models["xgb"].predict(X)
     rf_p    = models["rf"].predict(X)
     ridge_p = models["ridge"].predict(models["scaler"].transform(X))
-
     xp_base = np.clip(XGB_WEIGHT * xgb_p + RF_WEIGHT * rf_p + RIDGE_WEIGHT * ridge_p, 0, 25)
 
-    # Apply FDR multiplier for current GW
+    # Use full_fixtures_df if provided, else fall back to upcoming_fixtures
+    fix_df = full_fixtures_df if full_fixtures_df is not None else upcoming_fixtures
+
+    # Build player_id → team_id map
+    pid_to_team = {}
+    if "team_id" in players_df.columns:
+        pid_to_team = players_df.set_index("player_id")["team_id"].to_dict()
+
+    def get_multipliers(gw):
+        """Return array of per-player fixture multipliers for a given GW."""
+        if fix_df is None or fix_df.empty or gw is None:
+            return np.ones(len(features_df))
+        counts = _fixture_counts_for_gw(fix_df, gw)
+        if not counts:
+            return np.ones(len(features_df))
+        result = []
+        for pid in features_df["player_id"].values:
+            team_id = pid_to_team.get(pid)
+            fc = counts.get(int(team_id), 1) if team_id is not None else 1
+            result.append(fc)
+        return np.array(result, dtype=float)
+
+    # ── GW1 (current GW): FDR adjustment + DGW multiplier ────────────────────
     if "fdr" in features_df.columns:
         fdr_mult = features_df["fdr"].apply(
             lambda x: FDR_MULTIPLIER.get(int(round(float(x))), 1.0)
-        )
-        xp_gw1 = xp_base * fdr_mult.values
+        ).values
     else:
-        xp_gw1 = xp_base
+        fdr_mult = np.ones(len(features_df))
 
-    # ── DGW / BGW awareness for future GWs ──────────────────────────────────
-    # If we have fixture schedule data, use real fixture counts per team.
-    # Otherwise fall back to the old decay-only approach.
-    fix_df = full_fixtures_df if full_fixtures_df is not None else upcoming_fixtures
+    gw1_fixture_mult = get_multipliers(current_gw)
+    xp_gw1 = xp_base * fdr_mult * gw1_fixture_mult
 
-    if fix_df is not None and not fix_df.empty and current_gw is not None and "player_id" in features_df.columns:
-        pid_series = features_df["player_id"].values
+    # ── GW2 & GW3: decay × fixture count ─────────────────────────────────────
+    if current_gw is not None and fix_df is not None and not fix_df.empty:
+        gw2_mult = get_multipliers(current_gw + 1) * GW_DECAY[2]
+        gw3_mult = get_multipliers(current_gw + 2) * GW_DECAY[3]
+        xp_gw2 = xp_base * gw2_mult
+        xp_gw3 = xp_base * gw3_mult
 
-        # Build team_id lookup for the players in features_df
-        pid_to_team = players_df.set_index("player_id")["team_id"].to_dict()             if "team_id" in players_df.columns else {}
-
-        gw_col = "gw"    if "gw"    in fix_df.columns else "event"
-        h_col  = "team_h" if "team_h" in fix_df.columns else "home_team"
-        a_col  = "team_a" if "team_a" in fix_df.columns else "away_team"
-
-        def fixture_mult(pid, offset):
-            team_id = pid_to_team.get(pid)
-            if team_id is None or gw_col not in fix_df.columns:
-                return GW_DECAY[min(offset + 1, 3)]
-            count = int(((fix_df[gw_col] == current_gw + offset) &
-                         ((fix_df[h_col] == team_id) | (fix_df[a_col] == team_id))).sum())
-            # count=0 → BGW (0 pts expected), count=2 → DGW (doubled)
-            return count * GW_DECAY[1]  # decay[1]=1.0; we scale by actual games
-
-        mult_gw2 = np.array([fixture_mult(pid, 1) for pid in pid_series])
-        mult_gw3 = np.array([fixture_mult(pid, 2) for pid in pid_series])
-
-        xp_gw2 = xp_base * mult_gw2   # DGW: ~2x base, BGW: 0, normal: ~1x
-        xp_gw3 = xp_base * mult_gw3
-
-        print(f"  DGW/BGW multipliers applied: "
-              f"GW+1 range [{mult_gw2.min():.1f}-{mult_gw2.max():.1f}], "
-              f"GW+2 range [{mult_gw3.min():.1f}-{mult_gw3.max():.1f}]")
+        dgw1 = int((gw1_fixture_mult == 2).sum())
+        bgw1 = int((gw1_fixture_mult == 0).sum())
+        dgw2 = int((get_multipliers(current_gw + 1) == 2).sum())
+        bgw2 = int((get_multipliers(current_gw + 1) == 0).sum())
+        print(f"  GW{current_gw}:   {dgw1} DGW players, {bgw1} BGW players")
+        print(f"  GW{current_gw+1}: {dgw2} DGW players, {bgw2} BGW players")
     else:
-        # Fallback: decay only (no fixture data available)
         xp_gw2 = xp_gw1 * GW_DECAY[2]
         xp_gw3 = xp_gw1 * GW_DECAY[3]
-        print("  Warning: no fixture schedule for DGW/BGW weighting — using decay only.")
+        print("  Warning: no fixture schedule — using decay only")
 
     xp_total = xp_gw1 + xp_gw2 + xp_gw3
 
     results = features_df[["player_id"]].copy()
-    results["xp_gw1"]  = np.round(xp_gw1,  2)
-    results["xp_gw2"]  = np.round(xp_gw2,  2)
-    results["xp_gw3"]  = np.round(xp_gw3,  2)
+    results["xp_gw1"]   = np.round(xp_gw1,  2)
+    results["xp_gw2"]   = np.round(xp_gw2,  2)
+    results["xp_gw3"]   = np.round(xp_gw3,  2)
     results["xp_total"] = np.round(xp_total, 2)
+
+    # Store fixture counts per player for frontend use
+    results["fixture_count_gw1"] = gw1_fixture_mult.astype(int)
+    if current_gw is not None and fix_df is not None and not fix_df.empty:
+        results["fixture_count_gw2"] = get_multipliers(current_gw + 1).astype(int)
+        results["fixture_count_gw3"] = get_multipliers(current_gw + 2).astype(int)
+    else:
+        results["fixture_count_gw2"] = 1
+        results["fixture_count_gw3"] = 1
 
     meta_cols = ["player_id", "name", "position", "price", "ownership_pct", "status"]
     if "team_short" in players_df.columns:
@@ -143,7 +145,7 @@ def predict_xp(features_df, players_df, upcoming_fixtures=None, models=None,
     meta = players_df[[c for c in meta_cols if c in players_df.columns]].copy()
     results = results.merge(meta, on="player_id", how="left")
 
-    results["captain_score"]  = results["xp_gw1"] * 2
+    results["captain_score"]   = results["xp_gw1"] * 2
     results["is_differential"] = (
         (results["ownership_pct"] < 15.0) &
         (results["xp_total"] > results["xp_total"].quantile(0.7))
@@ -164,32 +166,37 @@ def get_captain_recommendations(predictions_df, top_n=3):
         "xp_next_gw":   float(r["xp_gw1"]),
         "captain_score": float(r["captain_score"]),
         "ownership":     float(r.get("ownership_pct", 0)),
+        "fixture_count": int(r.get("fixture_count_gw1", 1)),
     } for _, r in top.iterrows()]
 
 
 def get_differentials(predictions_df, top_n=5):
     diffs = predictions_df[predictions_df["is_differential"]].nlargest(top_n, "xp_total")
     return [{
-        "player_id": int(r["player_id"]),
-        "name":      r.get("name", "Unknown"),
-        "team":      r.get("team_short", r.get("team", "")),
-        "position":  r.get("position", ""),
-        "xp_total":  float(r["xp_total"]),
-        "xp_gw1":   float(r["xp_gw1"]),
-        "ownership": float(r.get("ownership_pct", 0)),
+        "player_id":     int(r["player_id"]),
+        "name":          r.get("name", "Unknown"),
+        "team":          r.get("team_short", r.get("team", "")),
+        "position":      r.get("position", ""),
+        "xp_total":     float(r["xp_total"]),
+        "xp_gw1":       float(r["xp_gw1"]),
+        "ownership":    float(r.get("ownership_pct", 0)),
+        "fixture_count": int(r.get("fixture_count_gw1", 1)),
     } for _, r in diffs.iterrows()]
 
 
 def get_essential_picks(predictions_df, top_n=5):
     essentials = predictions_df.nlargest(top_n, "xp_total")
     return [{
-        "player_id": int(r["player_id"]),
-        "name":      r.get("name", "Unknown"),
-        "team":      r.get("team_short", r.get("team", "")),
-        "position":  r.get("position", ""),
-        "xp_gw1":   float(r["xp_gw1"]),
-        "xp_gw2":   float(r["xp_gw2"]),
-        "xp_gw3":   float(r["xp_gw3"]),
-        "xp_total":  float(r["xp_total"]),
-        "ownership": float(r.get("ownership_pct", 0)),
+        "player_id":     int(r["player_id"]),
+        "name":          r.get("name", "Unknown"),
+        "team":          r.get("team_short", r.get("team", "")),
+        "position":      r.get("position", ""),
+        "xp_gw1":       float(r["xp_gw1"]),
+        "xp_gw2":       float(r["xp_gw2"]),
+        "xp_gw3":       float(r["xp_gw3"]),
+        "xp_total":     float(r["xp_total"]),
+        "ownership":    float(r.get("ownership_pct", 0)),
+        "fixture_count_gw1": int(r.get("fixture_count_gw1", 1)),
+        "fixture_count_gw2": int(r.get("fixture_count_gw2", 1)),
+        "fixture_count_gw3": int(r.get("fixture_count_gw3", 1)),
     } for _, r in essentials.iterrows()]

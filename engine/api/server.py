@@ -83,6 +83,31 @@ async def get_essentials(top_n: int = 5):
     import pandas as pd
     return {"essential_picks":get_essential_picks(pd.DataFrame(CACHE["predictions"]),top_n)}
 
+
+@app.get("/api/fixtures")
+async def get_fixtures():
+    """Return fixture counts per team per GW for next 4 GWs — used by frontend chip advisor."""
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://fantasy.premierleague.com/api/fixtures/") as r:
+                all_fixtures = await r.json()
+        current_gw = CACHE.get("current_gw") or 1
+        result = {}
+        for gw_offset in range(4):
+            gw = current_gw + gw_offset
+            gw_fix = [f for f in all_fixtures if f.get("event") == gw]
+            counts = {}
+            for f in gw_fix:
+                for k in ["team_h", "team_a"]:
+                    tid = f.get(k)
+                    if tid:
+                        counts[tid] = counts.get(tid, 0) + 1
+            result[gw] = counts
+        return {"fixtures_by_gw": result, "current_gw": current_gw}
+    except Exception as e:
+        raise HTTPException(500, f"Fixtures fetch failed: {e}")
+
 @app.post("/api/optimise")
 async def optimise(req: OptimiseRequest):
     if not CACHE["predictions"]: raise HTTPException(503,"No predictions.")
