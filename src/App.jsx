@@ -9,6 +9,7 @@ import Insights from './pages/Insights'
 import AdminConsole from './pages/AdminConsole'
 import OptimizerSettings from './pages/OptimizerSettings'
 import Rivals from './pages/Rivals'
+import OracleOptimizer from './pages/OracleOptimizer'
 import Settings from './pages/Settings'
 
 function ProtectedRoute({ children }) {
@@ -30,7 +31,8 @@ export default function App() {
         <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
         <Route path="/optimizer" element={<ProtectedRoute><OptimizerSettings /></ProtectedRoute>} />
-        <Route path="/rivals" element={<ProtectedRoute><Rivals /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/rivals" element={<ProtectedRoute><Rivals /></ProtectedRoute>} />
+        <Route path="/oracle" element={<ProtectedRoute><OracleOptimizer /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
