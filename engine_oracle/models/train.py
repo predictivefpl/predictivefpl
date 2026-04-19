@@ -11,8 +11,7 @@ MODEL_DIR.mkdir(exist_ok=True)
 def train_oracle_models(features_df: pd.DataFrame, feature_cols: list) -> dict:
     """Train XGBoost + LightGBM + Ridge on historical data."""
     import xgboost as xgb
-    import lightgbm as lgb
-    from sklearn.linear_model import Ridge
+        from sklearn.linear_model import Ridge
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
 
@@ -41,16 +40,18 @@ def train_oracle_models(features_df: pd.DataFrame, feature_cols: list) -> dict:
     xgb_m.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
 
     try:
-        lgb_m = lgb.LGBMRegressor(
+        import lightgbm as lgb_runtime
+        lgb_m = lgb_runtime.LGBMRegressor(
             n_estimators=300, max_depth=4, learning_rate=0.06,
             subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1,
         )
         lgb_m.fit(X_tr, y_tr,
                   eval_set=[(X_val, y_val)],
-                  callbacks=[lgb.early_stopping(20, verbose=False), lgb.log_evaluation(-1)])
+                  callbacks=[lgb_runtime.early_stopping(20, verbose=False),
+                              lgb_runtime.log_evaluation(-1)])
         print("  LightGBM trained OK")
     except Exception as e:
-        print(f"  LightGBM failed ({e}) — using ExtraTrees fallback")
+        print(f"  LightGBM unavailable ({type(e).__name__}) — using ExtraTrees fallback")
         from sklearn.ensemble import ExtraTreesRegressor
         lgb_m = ExtraTreesRegressor(n_estimators=200, max_depth=6, random_state=42, n_jobs=-1)
         lgb_m.fit(X_tr, y_tr)
