@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar'
 
 const ORACLE_URL  = window.location.hostname === 'localhost'
   ? 'http://localhost:8001'
-  : 'https://YOUR-NEW-RAILWAY-URL.up.railway.app'   // update once deployed
+  : 'https://predictivefpl-production.up.railway.app'   // update once deployed
 
 const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 const FPL_URL     = (path) => '/api/fpl?path=' + encodeURIComponent(path)
