@@ -21,11 +21,9 @@ MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 
 
 def load_models():
-    try:
-        return {k: joblib.load(os.path.join(MODEL_DIR, f"{k}.pkl"))
-                for k in ["xgb", "lgb", "ridge", "scaler", "feature_cols"]}
-    except FileNotFoundError:
-        return None
+    """Import from train.py to keep single source of truth."""
+    from models.train import load_models as _load
+    return _load()
 
 
 def predict_oracle_xp(

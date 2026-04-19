@@ -21,9 +21,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from data.pipeline import fetch_all_oracle_data
 from features.engineering import build_oracle_features
 from models.predict import predict_oracle_xp, load_models
+from models.train import train_oracle_models
 from optimizer.mip_solver import OracleRequest, solve_oracle
 
 import pandas as pd
+import aiohttp
 
 app = FastAPI(title="Oracle FPL Engine", version="2.0.0")
 app.add_middleware(CORSMiddleware,
@@ -201,13 +203,61 @@ async def _run_pipeline():
 
         print(f"GW:{current_gw}  Players:{len(players_df)}")
 
+        # Fetch player history for training (sample top players for speed)
+        print("Fetching player history...")
+        history_rows = []
+        top_pids = players_df.nlargest(150, "ppg")["player_id"].tolist()
+        async with aiohttp.ClientSession() as sess:
+            for pid in top_pids[:80]:
+                try:
+                    url = f"https://fantasy.premierleague.com/api/element-summary/{pid}/"
+                    async with sess.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                        if r.status == 200:
+                            d = await r.json()
+                            for gw_row in d.get("history", []):
+                                history_rows.append({
+                                    "player_id": pid,
+                                    "gw": gw_row.get("round"),
+                                    "total_points": gw_row.get("total_points", 0),
+                                    "minutes": gw_row.get("minutes", 0),
+                                    "goals_scored": gw_row.get("goals_scored", 0),
+                                    "assists": gw_row.get("assists", 0),
+                                    "clean_sheets": gw_row.get("clean_sheets", 0),
+                                    "bonus": gw_row.get("bonus", 0),
+                                    "bps": gw_row.get("bps", 0),
+                                    "expected_goal_involvements": float(gw_row.get("expected_goal_involvements", 0) or 0),
+                                    "was_home": int(gw_row.get("was_home", 0)),
+                                })
+                except Exception:
+                    pass
+        if history_rows:
+            history_df = pd.DataFrame(history_rows)
+            print(f"  Fetched {len(history_df)} history rows for {len(top_pids[:80])} players")
+
         # Feature engineering
         features_df = build_oracle_features(
             history_df, players_df, fixtures_df, elo, current_gw
         )
 
+        # Add target for training: shift total_points forward by 1 GW
+        if not history_df.empty and "total_points" in history_df.columns:
+            hist_sorted = history_df.sort_values(["player_id", "gw"])
+            hist_sorted["target_points"] = hist_sorted.groupby("player_id")["total_points"].shift(-1)
+            feat_with_target = features_df.merge(
+                hist_sorted[["player_id", "gw", "target_points"]].dropna(),
+                on="player_id", how="left"
+            )
+        else:
+            feat_with_target = features_df
+
+        # Train models
+        from features.engineering import FEATURE_COLS
+        avail_cols = [c for c in FEATURE_COLS if c in feat_with_target.columns]
+        models = train_oracle_models(feat_with_target, avail_cols)
+        if not models:
+            models = load_models()  # use existing if training failed
+
         # Predictions
-        models = load_models()
         preds_df = predict_oracle_xp(
             features_df, players_df, fixtures_df,
             current_gw, models=models, horizon=8
