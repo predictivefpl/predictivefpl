@@ -40,13 +40,20 @@ def train_oracle_models(features_df: pd.DataFrame, feature_cols: list) -> dict:
     )
     xgb_m.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
 
-    lgb_m = lgb.LGBMRegressor(
-        n_estimators=300, max_depth=4, learning_rate=0.06,
-        subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1,
-    )
-    lgb_m.fit(X_tr, y_tr,
-              eval_set=[(X_val, y_val)],
-              callbacks=[lgb.early_stopping(20, verbose=False), lgb.log_evaluation(-1)])
+    try:
+        lgb_m = lgb.LGBMRegressor(
+            n_estimators=300, max_depth=4, learning_rate=0.06,
+            subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1,
+        )
+        lgb_m.fit(X_tr, y_tr,
+                  eval_set=[(X_val, y_val)],
+                  callbacks=[lgb.early_stopping(20, verbose=False), lgb.log_evaluation(-1)])
+        print("  LightGBM trained OK")
+    except Exception as e:
+        print(f"  LightGBM failed ({e}) — using ExtraTrees fallback")
+        from sklearn.ensemble import ExtraTreesRegressor
+        lgb_m = ExtraTreesRegressor(n_estimators=200, max_depth=6, random_state=42, n_jobs=-1)
+        lgb_m.fit(X_tr, y_tr)
 
     scaler = StandardScaler()
     ridge_m = Ridge(alpha=10.0)

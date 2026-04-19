@@ -79,6 +79,12 @@ def _load_cache():
 async def startup():
     _load_cache()
     print("Oracle Engine ready.")
+    # Auto-train on startup if no predictions cached
+    if not CACHE["predictions"]:
+        print("No cache found — auto-training on startup...")
+        CACHE["training_status"] = "training"
+        import asyncio
+        asyncio.create_task(_run_pipeline())
 
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
@@ -177,6 +183,16 @@ async def captain(top_n: int = 5):
     return {"captain_picks": preds[:top_n], "current_gw": CACHE["current_gw"]}
 
 
+
+@app.post("/oracle/cron")
+async def cron_retrain(bg: BackgroundTasks):
+    """Called by Railway cron job — retrain silently, no auth needed from within Railway."""
+    if CACHE["training_status"] == "training":
+        return {"status": "already_training"}
+    CACHE["training_status"] = "training"
+    bg.add_task(_run_pipeline)
+    return {"status": "started"}
+
 @app.get("/oracle/fixtures")
 async def fixtures():
     return {
@@ -253,9 +269,11 @@ async def _run_pipeline():
         # Train models
         from features.engineering import FEATURE_COLS
         avail_cols = [c for c in FEATURE_COLS if c in feat_with_target.columns]
-        models = train_oracle_models(feat_with_target, avail_cols)
-        if not models:
-            models = load_models()  # use existing if training failed
+        try:
+            models = train_oracle_models(feat_with_target, avail_cols)
+        except Exception as train_err:
+            print(f"  Training error: {train_err} — falling back to PPG predictions")
+            models = load_models()  # use existing saved models if available
 
         # Predictions
         preds_df = predict_oracle_xp(

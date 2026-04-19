@@ -52,7 +52,7 @@ def predict_oracle_xp(
     if models:
         X = features_df.reindex(columns=feature_cols, fill_value=0).values.astype(np.float32)
         xgb_p   = models["xgb"].predict(X)
-        lgb_p   = models["lgb"].predict(X)
+        lgb_p   = models["lgb"].predict(X) if "lgb" in models and models["lgb"] is not None else xgb_p
         ridge_p = models["ridge"].predict(models["scaler"].transform(X))
         xp_base = np.clip(XGB_W * xgb_p + LGB_W * lgb_p + RIDGE_W * ridge_p, 0, 25)
     else:
