@@ -207,14 +207,15 @@ def solve_oracle(
             # Enforce squad continuity unless wildcard/freehit played this GW
             is_free_pick = req.force_chip in ("wildcard", "freehit")
             if cur_idx and not is_free_pick:
-                # Some current players may be absent from predictions_df (filtered out)
-                # Give extra free slots to compensate for those missing players
-                missing_from_preds = max(0, SQUAD_SIZE - len(cur_idx))
+                # cur_idx may have fewer than 15 if some current players were filtered
+                # from predictions_df (e.g. price=0, missing). Account for those gaps.
+                missing_from_preds = max(0, len(req.current_squad_ids) - len(cur_idx))
                 effective_free = req.num_free_transfers + missing_from_preds
-                # Constraint: at most effective_free players in GW0 NOT from current squad
-                prob += pulp.lpSum(
-                    x[i][0] for i in range(N) if i not in cur_idx
-                ) <= effective_free
+                # Require keeping at least (squad_size - effective_free) current players
+                n_to_keep = max(0, SQUAD_SIZE - effective_free)
+                if n_to_keep > 0:
+                    prob += pulp.lpSum(x[i][0] for i in cur_idx) >= n_to_keep
+                print(f"  Transfer constraint: keep >= {n_to_keep}, effective_free={effective_free}, cur_idx={len(cur_idx)}")
         else:
             for i in range(N):
                 prob += x[i][t] == x[i][t-1] - tout[i][t] + tin[i][t]
