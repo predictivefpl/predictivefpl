@@ -100,7 +100,22 @@ export default function OracleOptimizer() {
 
   useEffect(() => {
     if (!isAdmin) { navigate('/dashboard'); return }
-    fetchStatus()
+    fetchStatus().then(s => {
+      // Auto-train in background if predictions not cached
+      if (!s?.predictions_cached && s?.status === 'ok') {
+        console.log('Oracle: auto-training in background...')
+        fetch(ORACLE_URL + '/oracle/train', { method: 'POST' }).catch(() => {})
+        // Poll silently every 6s until done
+        const poll = setInterval(() => {
+          fetch(ORACLE_URL + '/oracle/status').then(r => r.json()).then(st => {
+            setStatus(st)
+            if (st.predictions_cached || st.training_status === 'error') {
+              clearInterval(poll)
+            }
+          }).catch(() => clearInterval(poll))
+        }, 6000)
+      }
+    })
     fetchBootstrap()
   }, [])
 
@@ -108,7 +123,12 @@ export default function OracleOptimizer() {
     try {
       const s = await fetch(ORACLE_URL + '/oracle/status').then(r => r.json())
       setStatus(s)
-    } catch { setStatus({ status:'offline' }) }
+      return s
+    } catch {
+      const offline = { status:'offline' }
+      setStatus(offline)
+      return offline
+    }
   }
 
   const fetchBootstrap = async () => {
@@ -567,12 +587,21 @@ export default function OracleOptimizer() {
                 </span>
               </div>
             )}
-            <button onClick={triggerTrain} disabled={training}
-              className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-2"
-              style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
-              <i className={'fa-solid ' + (training ? 'fa-spinner fa-spin' : 'fa-bolt')}/>
-              {training ? 'Training...' : 'Train Oracle'}
-            </button>
+            {/* Manual retrain — only shown when needed */}
+            {(!status?.predictions_cached || status?.training_status === 'error') && (
+              <button onClick={triggerTrain} disabled={training}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
+                <i className={'fa-solid ' + (training ? 'fa-spinner fa-spin' : 'fa-bolt')}/>
+                {training ? 'Training...' : 'Force Retrain'}
+              </button>
+            )}
+            {status?.training_status === 'training' && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-purple-300" style={{background:'rgba(168,85,247,0.1)',border:'1px solid rgba(168,85,247,0.2)'}}>
+                <i className="fa-solid fa-spinner fa-spin text-purple-400"/>
+                Training in background...
+              </div>
+            )}
           </div>
         </div>
 
@@ -619,9 +648,9 @@ export default function OracleOptimizer() {
                   <label className="text-xs text-gray-400">Free Transfers</label>
                 </div>
                 <div className="flex gap-1.5">
-                  {[0,1,2].map(n => (
+                  {[0,1,2,3,4,5,6].map(n => (
                     <button key={n} onClick={()=>setFreeTx(n)}
-                      className={'flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all ' + (freeTx===n?'border-blue-500 bg-blue-500/10 text-blue-400':'border-gray-700 text-gray-500 hover:border-gray-500')}>
+                      className={'py-1 px-1 rounded-lg text-[11px] font-bold border transition-all ' + (freeTx===n?'border-blue-500 bg-blue-500/10 text-blue-400':'border-gray-700 text-gray-500 hover:border-gray-500')}>
                       {n}
                     </button>
                   ))}
