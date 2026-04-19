@@ -267,60 +267,92 @@ export default function OracleOptimizer() {
   }
 
   // ── Chips section with real FPL data ───────────────────────────────────────
-  const renderChipsPanel = () => (
-    <GlassCard className="p-4 space-y-3">
-      <p className="text-xs text-gray-400 uppercase tracking-wider flex items-center gap-2">
-        <i className="fa-solid fa-microchip text-purple-400"/> Chips
-      </p>
-      {Object.entries(chips).map(([chip, avail]) => {
-        const isUsed = usedChips.includes(chipFPLKey[chip])
-        return (
-          <div key={chip} className="flex items-center justify-between p-2.5 rounded-xl border transition-all"
-            style={{
-              background: isUsed ? 'rgba(255,255,255,0.02)' : avail ? `${chipColor[chip]}0a` : 'rgba(255,255,255,0.02)',
-              borderColor: isUsed ? 'rgba(255,255,255,0.06)' : avail ? `${chipColor[chip]}33` : 'rgba(255,255,255,0.06)',
-              opacity: isUsed ? 0.45 : 1
-            }}>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{background:`${chipColor[chip]}18`}}>
-                <i className={'fa-solid ' + chipIcon[chip] + ' text-xs'} style={{color: isUsed ? '#6b7280' : chipColor[chip]}}/>
-              </div>
-              <div>
-                <p className={'text-xs font-bold capitalize ' + (isUsed ? 'text-gray-500' : 'text-white')}>{chip}</p>
-                <p className={'text-[9px] font-bold ' + (isUsed ? 'text-gray-600' : 'text-green-400')}>
-                  {isUsed ? '✗ Used' : '✓ Available'}
-                </p>
-              </div>
-            </div>
-            {!isUsed && (
-              <button onClick={() => setChips(c => ({...c,[chip]:!c[chip]}))}
-                className={'w-9 h-5 rounded-full relative transition-colors flex-shrink-0 ' + (avail ? 'bg-purple-500' : 'bg-gray-700')}>
-                <div className={'w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ' + (avail ? 'right-0.5' : 'left-0.5')}/>
-              </button>
-            )}
-          </div>
-        )
-      })}
-      <div>
-        <p className="text-[10px] text-gray-500 mb-2">Force chip this GW <span className="text-purple-400">(plays chip immediately)</span></p>
-        <div className="flex flex-wrap gap-1">
-          {[null,'wildcard','freehit','benchboost','triplecaptain'].map(c => {
-            const isUsed = c && usedChips.includes(chipFPLKey[c])
+  // ── Chip timing advice panel ─────────────────────────────────────────────
+  const renderChipsPanel = () => {
+    const dgwCount = (dgwMap[currentGW] || []).length
+    const bgwCount = (bgwMap[currentGW] || []).length
+    const dgwNext  = (dgwMap[currentGW+1] || []).length
+    const bgwNext  = (bgwMap[currentGW+1] || []).length
+
+    const advice = {
+      wildcard: dgwCount >= 3 || dgwNext >= 4
+        ? {score:90, tip:`GW${dgwCount>=3?currentGW:currentGW+1} has ${dgwCount>=3?dgwCount:dgwNext} double teams — rebuild around them.`, col:'#3b82f6'}
+        : {score:60, tip:'Save for before a large Double Gameweek.', col:'#3b82f6'},
+      freehit: bgwCount >= 5
+        ? {score:95, tip:`GW${currentGW} has ${bgwCount} blank teams — play Free Hit now.`, col:'#10b981'}
+        : bgwNext >= 5
+          ? {score:85, tip:`GW${currentGW+1} has ${bgwNext} blanks — save for next week.`, col:'#10b981'}
+          : {score:35, tip:'Hold for a confirmed Blank Gameweek (5+ teams missing).', col:'#10b981'},
+      benchboost: dgwCount >= 3
+        ? {score:93, tip:`DGW this GW — bench could add 20-30 extra pts.`, col:'#f59e0b'}
+        : dgwNext >= 3
+          ? {score:80, tip:'Load bench with DGW players first, then play next GW.', col:'#f59e0b'}
+          : {score:30, tip:'Save for a DGW once bench is loaded with double-fixture players.', col:'#f59e0b'},
+      triplecaptain: dgwCount >= 2
+        ? {score:90, tip:'DGW this week — triple a premium with 2 home fixtures.', col:'#a855f7'}
+        : dgwNext >= 2
+          ? {score:78, tip:'DGW next week — save TC and captain a premium then.', col:'#a855f7'}
+          : {score:35, tip:'Only play in a DGW on a premium (Haaland/Salah).', col:'#a855f7'},
+    }
+
+    return (
+      <GlassCard className="p-4">
+        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i className="fa-solid fa-microchip text-purple-400"/> Chip Timing
+        </p>
+        <div className="space-y-2 mb-3">
+          {Object.entries(advice).map(([chip, {score,tip,col}]) => {
+            const isUsed    = usedChips.includes(chipFPLKey[chip])
+            const readiness = score >= 80 ? 'Play Now' : score >= 55 ? 'Consider' : 'Hold'
+            const readCol   = score >= 80 ? '#10b981' : score >= 55 ? '#f59e0b' : '#6b7280'
             return (
-              <button key={c||'none'} onClick={() => { if (!isUsed) { setForceChip(c); if (c) setChips(prev => ({...prev, [c]: true})) } }} disabled={!!isUsed}
-                className={'px-2 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-30 disabled:cursor-not-allowed ' + (forceChip===c ? 'text-white' : 'text-gray-500 hover:text-gray-300')}
-                style={{borderColor: c ? chipColor[c]+'55' : 'rgba(255,255,255,0.1)', background: forceChip===c && c ? chipColor[c]+'22' : 'transparent'}}>
-                {c ? c.slice(0,2).toUpperCase() : 'None'}
+              <div key={chip} className="p-2.5 rounded-xl" style={{
+                background: isUsed ? 'rgba(0,0,0,0.2)' : col+'0a',
+                border: `1px solid ${isUsed ? 'rgba(255,255,255,0.05)' : col+'22'}`,
+                opacity: isUsed ? 0.4 : 1
+              }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <i className={'fa-solid ' + chipIcon[chip] + ' text-xs'} style={{color:isUsed?'#6b7280':col}}/>
+                    <span className="text-[11px] font-bold capitalize text-white">{chip}</span>
+                    {isUsed && <span className="text-[9px] text-gray-600 font-bold ml-1">✗ USED</span>}
+                  </div>
+                  {!isUsed && <span className="text-[9px] font-black" style={{color:readCol}}>{readiness}</span>}
+                </div>
+                {!isUsed && (
+                  <>
+                    <div className="h-1 rounded-full bg-white/5 mb-1.5 overflow-hidden">
+                      <div className="h-full rounded-full" style={{width:score+'%',background:col}}/>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">{tip}</p>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-[10px] text-gray-500 mb-1.5">Play chip this GW</p>
+        <div className="flex flex-wrap gap-1">
+          {[null,'wildcard','freehit','benchboost','triplecaptain'].map(fc => {
+            const isUsed = fc && usedChips.includes(chipFPLKey[fc])
+            return (
+              <button key={fc||'none'} onClick={() => { if (!isUsed) setForceChip(fc) }} disabled={!!isUsed}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+                style={{
+                  borderColor: fc ? chipColor[fc]+(forceChip===fc?'99':'44') : 'rgba(255,255,255,0.1)',
+                  background:  forceChip===fc && fc ? chipColor[fc]+'22' : 'transparent',
+                  color:       forceChip===fc ? '#fff' : '#6b7280'
+                }}>
+                {fc ? fc.slice(0,2).toUpperCase() : 'None'}
               </button>
             )
           })}
         </div>
-      </div>
-    </GlassCard>
-  )
+      </GlassCard>
+    )
+  }
 
-  // ── xP Horizon Timeline (replaces bar chart) ───────────────────────────────
+    // ── xP Horizon Timeline (replaces bar chart) ───────────────────────────────
   const renderXPTimeline = () => {
     if (!result?.xp_by_gw?.length) return null
     const maxXP = Math.max(...result.xp_by_gw, 1)

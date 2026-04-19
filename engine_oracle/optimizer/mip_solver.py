@@ -200,11 +200,21 @@ def solve_oracle(
 
         # Transfer flow: x[i,t] = x[i,t-1] - out + in  (for t > 0)
         if t == 0:
-            # GW0: solver picks best squad freely — transfer diff identified in results
-            # For wildcard/freehit: unconstrained (picks best 15)
-            # For normal: unconstrained at GW0; future GW constraints handle transfer flow
+            # GW0: no transfers out (this is starting point)
             for i in range(N):
                 prob += tout[i][0] == 0
+
+            # Enforce squad continuity unless wildcard/freehit played this GW
+            is_free_pick = req.force_chip in ("wildcard", "freehit")
+            if cur_idx and not is_free_pick:
+                # Some current players may be absent from predictions_df (filtered out)
+                # Give extra free slots to compensate for those missing players
+                missing_from_preds = max(0, SQUAD_SIZE - len(cur_idx))
+                effective_free = req.num_free_transfers + missing_from_preds
+                # Constraint: at most effective_free players in GW0 NOT from current squad
+                prob += pulp.lpSum(
+                    x[i][0] for i in range(N) if i not in cur_idx
+                ) <= effective_free
         else:
             for i in range(N):
                 prob += x[i][t] == x[i][t-1] - tout[i][t] + tin[i][t]
