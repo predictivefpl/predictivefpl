@@ -200,23 +200,11 @@ def solve_oracle(
 
         # Transfer flow: x[i,t] = x[i,t-1] - out + in  (for t > 0)
         if t == 0:
-            # GW0: allow free transfers if wildcard/freehit is played this GW
-            is_chip_gw0 = (
-                (wc_gw is not None and req.force_chip == "wildcard") or
-                (fh_gw is not None and req.force_chip == "freehit")
-            )
-            if is_chip_gw0:
-                # Wildcard/FH: completely free to pick any 15 players
-                # No transfer constraints — solver picks optimal squad from scratch
-                for i in range(N):
-                    prob += n_tx[0] == 0  # no transfer cost counted
-            else:
-                # Normal GW0: no transfers out (this is the starting squad)
-                for i in range(N):
-                    prob += tout[i][0] == 0
-                # Enforce current squad constraint for normal GW
-                if cur_idx and req.num_free_transfers < 15:
-                    prob += pulp.lpSum(x[i][0] for i in range(N) if i not in cur_idx) <= req.num_free_transfers
+            # GW0: solver picks best squad freely — transfer diff identified in results
+            # For wildcard/freehit: unconstrained (picks best 15)
+            # For normal: unconstrained at GW0; future GW constraints handle transfer flow
+            for i in range(N):
+                prob += tout[i][0] == 0
         else:
             for i in range(N):
                 prob += x[i][t] == x[i][t-1] - tout[i][t] + tin[i][t]
@@ -287,15 +275,7 @@ def solve_oracle(
     elif req.force_chip == "triplecaptain" and tc_gw:
         prob += tc_gw[0] == 1
 
-    # Transfer limit for GW0 (normal — no chip)
-    # Only enforce if NOT playing wildcard or freehit this GW
-    is_unlimited_gw0 = req.force_chip in ("wildcard", "freehit")
-    if (not is_unlimited_gw0 and cur_idx and
-            req.num_free_transfers < 15 and len(req.current_squad_ids) > 0):
-        # Max transfers in from players not in current squad
-        prob += pulp.lpSum(
-            x[i][0] for i in range(N) if i not in cur_idx
-        ) <= req.num_free_transfers
+
 
     # ─── Solve ────────────────────────────────────────────────────────────
     solver = pulp.PULP_CBC_CMD(msg=0, timeLimit=60)

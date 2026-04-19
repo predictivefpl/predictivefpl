@@ -730,6 +730,59 @@ export default function OracleOptimizer() {
                   </GlassCard>
                 )}
 
+                {/* Players In vs Players Out */}
+                {result?.squad?.length > 0 && (() => {
+                  const ins  = (result.squad||[]).filter(p => newIds.has(p.player_id))
+                  const outs = (result.transfers||[]).filter(t => t.action==='out' && t.gw===1)
+                  if (!ins.length && !outs.length) return null
+                  return (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <GlassCard className="p-4">
+                        <p className="text-xs font-bold text-green-400 mb-3 flex items-center gap-1.5">
+                          <i className="fa-solid fa-arrow-down text-xs"/> Players In
+                        </p>
+                        {ins.length === 0
+                          ? <p className="text-xs text-gray-600">No changes from current squad</p>
+                          : ins.map((p,i) => (
+                            <div key={i} className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)'}}>
+                              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border border-green-500/40"
+                                style={{background:`linear-gradient(135deg,${POS_COLOR[p.position]}22,${POS_COLOR[p.position]}44)`}}>
+                                {photoMap[p.player_id]
+                                  ? <img src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${photoMap[p.player_id]}.png`} className="w-full h-full object-cover object-top" style={{transform:'scale(1.2) translateY(3px)'}} alt={p.name}/>
+                                  : <div className="w-full h-full flex items-center justify-center"><i className="fa-solid fa-person text-white/40 text-xs"/></div>}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{p.name}</p>
+                                <p className="text-[10px] text-gray-500">{p.position} · {p.team_short} · £{Number(p.price).toFixed(1)}m</p>
+                              </div>
+                              <span className="text-[10px] font-bold text-green-400 flex-shrink-0">{Number(p.xp_gw1).toFixed(1)} xP{p.fixture_count_gw1===2?' ×2':''}</span>
+                            </div>
+                          ))
+                        }
+                      </GlassCard>
+                      <GlassCard className="p-4">
+                        <p className="text-xs font-bold text-red-400 mb-3 flex items-center gap-1.5">
+                          <i className="fa-solid fa-arrow-up text-xs"/> Players Out
+                        </p>
+                        {outs.length === 0
+                          ? <p className="text-xs text-gray-600">No transfers out this GW</p>
+                          : outs.map((p,i) => (
+                            <div key={i} className="flex items-center gap-2 mb-2 p-2 rounded-lg" style={{background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.15)'}}>
+                              <div className="w-7 h-7 rounded-full flex-shrink-0 border border-red-500/30 bg-red-500/10 flex items-center justify-center">
+                                <i className="fa-solid fa-person text-red-400/60 text-xs"/>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-red-300 truncate">{p.name}</p>
+                                <p className="text-[10px] text-gray-500">£{Number(p.price).toFixed(1)}m</p>
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </GlassCard>
+                    </div>
+                  )
+                })()}
+
                 {/* Transfer Plan Tab */}
                 {activeTab === 'transfers' && (
                   <div className="space-y-3">
