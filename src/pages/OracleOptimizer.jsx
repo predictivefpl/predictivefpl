@@ -303,12 +303,12 @@ export default function OracleOptimizer() {
         )
       })}
       <div>
-        <p className="text-[10px] text-gray-500 mb-2">Force chip this GW</p>
+        <p className="text-[10px] text-gray-500 mb-2">Force chip this GW <span className="text-purple-400">(plays chip immediately)</span></p>
         <div className="flex flex-wrap gap-1">
           {[null,'wildcard','freehit','benchboost','triplecaptain'].map(c => {
             const isUsed = c && usedChips.includes(chipFPLKey[c])
             return (
-              <button key={c||'none'} onClick={() => !isUsed && setForceChip(c)} disabled={!!isUsed}
+              <button key={c||'none'} onClick={() => { if (!isUsed) { setForceChip(c); if (c) setChips(prev => ({...prev, [c]: true})) } }} disabled={!!isUsed}
                 className={'px-2 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-30 disabled:cursor-not-allowed ' + (forceChip===c ? 'text-white' : 'text-gray-500 hover:text-gray-300')}
                 style={{borderColor: c ? chipColor[c]+'55' : 'rgba(255,255,255,0.1)', background: forceChip===c && c ? chipColor[c]+'22' : 'transparent'}}>
                 {c ? c.slice(0,2).toUpperCase() : 'None'}
@@ -618,6 +618,16 @@ export default function OracleOptimizer() {
             {/* Chips with real FPL data */}
             {renderChipsPanel()}
 
+            {forceChip === 'wildcard' && (
+              <div className="p-3 rounded-xl mb-2 text-xs text-center font-medium" style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>
+                <i className="fa-solid fa-wand-magic-sparkles mr-1"/>Wildcard active — Oracle will build a completely new squad from scratch
+              </div>
+            )}
+            {forceChip === 'freehit' && (
+              <div className="p-3 rounded-xl mb-2 text-xs text-center font-medium" style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',color:'#34d399'}}>
+                <i className="fa-solid fa-bolt mr-1"/>Free Hit active — temporary optimal squad, reverts next GW
+              </div>
+            )}
             <button onClick={runOptimiser} disabled={running || !status?.predictions_cached}
               className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)',boxShadow:running?'none':'0 4px 20px rgba(168,85,247,0.3)'}}>
