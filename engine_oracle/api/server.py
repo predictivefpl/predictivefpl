@@ -219,12 +219,12 @@ async def _run_pipeline():
 
         print(f"GW:{current_gw}  Players:{len(players_df)}")
 
-        # Fetch player history for training (sample top players for speed)
-        print("Fetching player history...")
+        # Fetch player history for top players (used for ML training)
+        print("Fetching player history for training...")
         history_rows = []
-        top_pids = players_df.nlargest(150, "ppg")["player_id"].tolist()
+        top_pids = players_df.nlargest(100, "ppg")["player_id"].tolist()
         async with aiohttp.ClientSession() as sess:
-            for pid in top_pids[:80]:
+            for pid in top_pids:
                 try:
                     url = f"https://fantasy.premierleague.com/api/element-summary/{pid}/"
                     async with sess.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
@@ -246,16 +246,11 @@ async def _run_pipeline():
                                 })
                 except Exception:
                     pass
-        if history_rows:
-            history_df = pd.DataFrame(history_rows)
-            print(f"  Fetched {len(history_df)} history rows for {len(top_pids[:80])} players")
+        history_df = pd.DataFrame(history_rows) if history_rows else pd.DataFrame()
+        print(f"  Fetched {len(history_df)} history rows for {len(top_pids)} players")
 
-        # Feature engineering
-        features_df = build_oracle_features(
-            history_df, players_df, fixtures_df, elo, current_gw
-        )
-
-        # Add target for training: shift total_points forward by 1 GW
+        # Build features for top players + train
+        features_df = build_oracle_features(history_df, players_df, fixtures_df, elo, current_gw)
         if not history_df.empty and "total_points" in history_df.columns:
             hist_sorted = history_df.sort_values(["player_id", "gw"])
             hist_sorted["target_points"] = hist_sorted.groupby("player_id")["total_points"].shift(-1)
@@ -265,21 +260,35 @@ async def _run_pipeline():
             )
         else:
             feat_with_target = features_df
-
-        # Train models
         from features.engineering import FEATURE_COLS
         avail_cols = [c for c in FEATURE_COLS if c in feat_with_target.columns]
         try:
             models = train_oracle_models(feat_with_target, avail_cols)
         except Exception as train_err:
-            print(f"  Training error: {train_err} — falling back to PPG predictions")
-            models = load_models()  # use existing saved models if available
+            print(f"  Training error: {train_err}")
+            models = None
+        if not models:
+            models = load_models()
 
-        # Predictions
+        # ── Generate predictions for ALL players (not just top 100) ──────────
+        # Players with history get ML-based xP; rest get PPG-based fallback
+        print(f"Building predictions for ALL {len(players_df)} players...")
+        from features.engineering import _build_from_players_only
+        all_features = _build_from_players_only(players_df, fixtures_df, elo, current_gw)
+
+        # Merge: use history-based features where available
+        if not features_df.empty:
+            hist_pids = set(features_df["player_id"].tolist())
+            no_hist   = all_features[~all_features["player_id"].isin(hist_pids)].copy()
+            combined  = pd.concat([features_df, no_hist], ignore_index=True)
+        else:
+            combined = all_features
+        print(f"  Combined features: {len(combined)} players")
+
         preds_df = predict_oracle_xp(
-            features_df, players_df, fixtures_df,
+            combined, players_df, fixtures_df,
             current_gw, models=models, horizon=8
-        )
+        )      )
 
         # Serialise
         preds_list = preds_df.to_dict(orient="records")
