@@ -22,7 +22,7 @@ from data.pipeline import fetch_all_oracle_data
 from features.engineering import build_oracle_features
 from models.predict import predict_oracle_xp, load_models
 from models.train import train_oracle_models
-from optimizer.mip_solver import OracleRequest, solve_oracle
+from optimizer.greedy_solver import solve_greedy
 
 import pandas as pd
 import aiohttp
@@ -146,46 +146,20 @@ async def optimise(req: OptimiseReq):
     if not CACHE["predictions"]:
         raise HTTPException(503, "No predictions cached. POST /oracle/train first.")
     preds_df = pd.DataFrame(CACHE["predictions"])
+    print(f"Optimising: {req.num_free_transfers} transfers, budget={req.budget}, squad={len(req.current_squad_ids)} players, chip={req.force_chip}")
 
-    # Try requested transfers first, fall back if infeasible (budget too tight)
-    result = None
-    for n_tx in range(req.num_free_transfers, -1, -1):
-        oracle_req = OracleRequest(
-            budget=req.budget,
-            horizon=min(req.horizon, 8),
-            num_free_transfers=n_tx,
-            current_squad_ids=req.current_squad_ids,
-            objective=req.objective,
-            wildcard_available=req.wildcard_available,
-            freehit_available=req.freehit_available,
-            benchboost_available=req.benchboost_available,
-            triplecaptain_available=req.triplecaptain_available,
-            force_chip=req.force_chip,
-        )
-        result = solve_oracle(preds_df, oracle_req)
-        if result.status in ("Optimal", "Feasible"):
-            if n_tx < req.num_free_transfers:
-                print(f"  Fell back to {n_tx} transfers (budget too tight for {req.num_free_transfers})")
-            break
+    result = solve_greedy(
+        predictions_df=preds_df,
+        current_squad_ids=req.current_squad_ids or [],
+        budget=req.budget,
+        num_transfers=req.num_free_transfers,
+        horizon=min(req.horizon, 8),
+        force_chip=req.force_chip,
+    )
 
-    if not result or result.status not in ("Optimal", "Feasible"):
-        raise HTTPException(500, f"Solver infeasible even with 0 transfers. Check budget ({req.budget}m).")
-
-    return {
-        "status":        result.status,
-        "squad":         result.squad,
-        "transfers":     result.transfers,
-        "chip_plan":     result.chip_plan,
-        "xp_by_gw":     result.xp_by_gw,
-        "total_xp":     result.total_xp,
-        "total_hits":   result.total_hits,
-        "net_xp":        result.net_xp,
-        "option_value": result.option_value,
-        "transfer_plan": result.transfer_plan,
-        "dgw_map":       CACHE["dgw_map"],
-        "current_gw":    CACHE["current_gw"],
-        "transfers_applied": oracle_req.num_free_transfers,
-    }
+    result["dgw_map"]    = CACHE["dgw_map"]
+    result["current_gw"] = CACHE["current_gw"]
+    return result
 
 
 @app.get("/oracle/captain")
