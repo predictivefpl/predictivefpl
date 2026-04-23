@@ -81,7 +81,7 @@ export default function OracleOptimizer() {
   const [usedChips, setUsedChips]   = useState([])   // chips used by user from FPL
 
   const [budget, setBudget]         = useState(null)  // fetched from FPL, not user-editable
-  const [horizon, setHorizon]       = useState(8)
+  const [horizon, setHorizon]       = useState(5)
   const [freeTx, setFreeTx]         = useState(1)
   const [chips, setChips]           = useState({ wildcard:true, freehit:true, benchboost:true, triplecaptain:true })
   const [forceChip, setForceChip]   = useState(null)
@@ -89,6 +89,7 @@ export default function OracleOptimizer() {
 
   const [result, setResult]         = useState(null)
   const [running, setRunning]       = useState(false)
+  const [showPopup, setShowPopup]     = useState(false)
   const [training, setTraining]     = useState(false)
   const [error, setError]           = useState('')
   const [activeTab, setActiveTab]   = useState('squad')
@@ -227,6 +228,7 @@ export default function OracleOptimizer() {
       const data = await res.json()
       setResult(data)
       setActiveTab('squad')
+      setShowPopup(true)
     } catch(e) { setError('Optimiser failed: ' + e.message) }
     setRunning(false)
   }
@@ -351,23 +353,7 @@ export default function OracleOptimizer() {
             )
           })}
         </div>
-        <p className="text-[10px] text-gray-500 mb-1.5">Play chip this GW</p>
-        <div className="flex flex-wrap gap-1">
-          {[null,'wildcard','freehit','benchboost','triplecaptain'].map(fc => {
-            const isUsed = fc && usedChips.includes(chipFPLKey[fc])
-            return (
-              <button key={fc||'none'} onClick={() => { if (!isUsed) setForceChip(fc) }} disabled={!!isUsed}
-                className="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all disabled:opacity-25 disabled:cursor-not-allowed"
-                style={{
-                  borderColor: fc ? chipColor[fc]+(forceChip===fc?'99':'44') : 'rgba(255,255,255,0.1)',
-                  background:  forceChip===fc && fc ? chipColor[fc]+'22' : 'transparent',
-                  color:       forceChip===fc ? '#fff' : '#6b7280'
-                }}>
-                {fc ? fc.slice(0,2).toUpperCase() : 'None'}
-              </button>
-            )
-          })}
-        </div>
+
       </GlassCard>
     )
   }
@@ -560,8 +546,118 @@ export default function OracleOptimizer() {
     )
   }
 
+  // ── Result popup (like FFF's Optibot modal) ──────────────────────────────
+  const renderPopup = () => {
+    if (!showPopup || !result || result.status !== 'Optimal') return null
+    const ins   = (result.transfers||[]).filter(t=>t.action==='in')
+    const outs  = (result.transfers||[]).filter(t=>t.action==='out')
+    const captain = (result.squad||[]).find(p=>p.is_captain)
+    const isWC  = forceChip === 'wildcard'
+    const isFH  = forceChip === 'freehit'
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)'}}
+        onClick={e => { if (e.target === e.currentTarget) setShowPopup(false) }}>
+        <div className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden" style={{background:'#0F121D',border:'1px solid rgba(168,85,247,0.3)',boxShadow:'0 0 60px rgba(168,85,247,0.2)'}}>
+          {/* Header */}
+          <div className="p-5 text-center" style={{background:'linear-gradient(135deg,rgba(168,85,247,0.15),rgba(59,130,246,0.1))'}}>
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
+              <i className="fa-solid fa-brain text-white text-xl"/>
+            </div>
+            <h2 className="text-xl font-black text-white">Oracle Recommendation</h2>
+            <p className="text-xs text-gray-400 mt-1">
+              {isWC ? 'Wildcard — Full squad rebuild' : isFH ? 'Free Hit — Temporary optimal squad' : `${ins.length} transfer${ins.length!==1?'s':''} recommended`}
+            </p>
+          </div>
+
+          {/* xP summary */}
+          <div className="grid grid-cols-3 gap-3 px-5 py-4 border-b border-gray-800/50">
+            <div className="text-center">
+              <p className="text-2xl font-black text-purple-400">{result.total_xp?.toFixed(1)}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Total xP</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-black text-green-400">{result.net_xp?.toFixed(1)}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Net xP</p>
+            </div>
+            <div className="text-center">
+              <p className={'text-2xl font-black ' + (result.total_hits>0?'text-red-400':'text-gray-400')}>{result.total_hits>0 ? '-'+(result.total_hits*4) : '0'}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wide">Hit Cost</p>
+            </div>
+          </div>
+
+          {/* Transfers */}
+          {ins.length > 0 && (
+            <div className="px-5 py-4 space-y-2 border-b border-gray-800/50">
+              {outs.map((out,i) => {
+                const tin = ins[i]
+                if (!tin) return null
+                const gain = (tin.xp_gw1||0) - 0
+                return (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-arrow-up text-red-400" style={{fontSize:7}}/>
+                        </div>
+                        <span className="text-xs font-bold text-red-400">{out.name}</span>
+                        <span className="text-[10px] text-gray-500">£{out.price?.toFixed(1)}m</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-arrow-down text-green-400" style={{fontSize:7}}/>
+                        </div>
+                        <span className="text-xs font-bold text-green-400">{tin.name}</span>
+                        <span className="text-[10px] text-gray-500">£{tin.price?.toFixed(1)}m</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-black text-white">{(tin.xp_gw1||0).toFixed(1)}<span className="text-[9px] text-gray-500 ml-0.5">xP</span></p>
+                      {tin.fixture_count_gw1===2 && <span className="text-[9px] font-bold text-green-400">DGW ×2</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Captain */}
+          {captain && (
+            <div className="px-5 py-3 border-b border-gray-800/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-black text-[10px] font-black" style={{background:'linear-gradient(135deg,#facc15,#f59e0b)'}}>C</div>
+                <div>
+                  <p className="text-xs font-bold text-white">{captain.name}</p>
+                  <p className="text-[10px] text-gray-500">{captain.team_short} · Captain pick</p>
+                </div>
+              </div>
+              <p className="text-sm font-black text-yellow-400">{((captain.xp_gw1||0)*2).toFixed(1)} xP</p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="p-4 flex gap-3">
+            <button onClick={() => setShowPopup(false)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-all">
+              View Details
+            </button>
+            <button onClick={() => setShowPopup(false)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+              style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
+              Apply Transfers
+            </button>
+          </div>
+
+          <button onClick={() => setShowPopup(false)} className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
+            <i className="fa-solid fa-times text-xs"/>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
+      {renderPopup()}
       <Sidebar/>
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -644,17 +740,40 @@ export default function OracleOptimizer() {
                 <input type="range" min="1" max="8" value={horizon} onChange={e=>setHorizon(+e.target.value)} className="w-full accent-purple-500"/>
               </div>
               <div>
-                <div className="flex justify-between mb-1">
-                  <label className="text-xs text-gray-400">How Many Transfers</label>
-                </div>
-                <div className="flex gap-1.5">
+                <label className="text-xs text-gray-400 block mb-2">How Many Transfers</label>
+                <div className="flex gap-1 flex-wrap">
                   {[0,1,2,3,4,5,6].map(n => (
-                    <button key={n} onClick={()=>setFreeTx(n)}
-                      className={'py-1 px-1 rounded-lg text-[11px] font-bold border transition-all ' + (freeTx===n?'border-blue-500 bg-blue-500/10 text-blue-400':'border-gray-700 text-gray-500 hover:border-gray-500')}>
+                    <button key={n} onClick={()=>{ setFreeTx(n); setForceChip(null) }}
+                      className={'py-1 px-2 rounded-lg text-[11px] font-bold border transition-all ' + (freeTx===n && !forceChip ? 'border-blue-500 bg-blue-500/10 text-blue-400':'border-gray-700 text-gray-500 hover:border-gray-500')}>
                       {n}
                     </button>
                   ))}
                 </div>
+                <div className="flex gap-1.5 mt-2">
+                  {[
+                    {key:'wildcard', label:'Wildcard', abbr:'WC', col:'#3b82f6'},
+                    {key:'freehit',  label:'Free Hit',  abbr:'FH', col:'#10b981'},
+                  ].map(chip => {
+                    const isUsed = usedChips.includes(chipFPLKey[chip.key])
+                    return (
+                      <button key={chip.key}
+                        onClick={() => { if (!isUsed) { setForceChip(forceChip===chip.key ? null : chip.key); setFreeTx(15) } }}
+                        disabled={isUsed}
+                        className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                        style={{
+                          borderColor: forceChip===chip.key ? chip.col : 'rgba(255,255,255,0.1)',
+                          background:  forceChip===chip.key ? chip.col+'22' : 'transparent',
+                          color:       forceChip===chip.key ? chip.col : '#6b7280'
+                        }}>
+                        <i className={'fa-solid text-[10px] ' + (chip.key==='wildcard'?'fa-wand-magic-sparkles':'fa-bolt')} style={{color: forceChip===chip.key ? chip.col : '#6b7280'}}/>
+                        {chip.abbr}
+                        {isUsed && <span className="text-[8px] opacity-60">used</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+                {forceChip === 'wildcard' && <p className="text-[10px] text-blue-400 mt-1.5"><i className="fa-solid fa-wand-magic-sparkles mr-1"/>Wildcard: builds optimal squad from scratch</p>}
+                {forceChip === 'freehit'  && <p className="text-[10px] text-green-400 mt-1.5"><i className="fa-solid fa-bolt mr-1"/>Free Hit: temporary squad, reverts next GW</p>}
               </div>
               {/* Budget — fetched from FPL, display only */}
               {budget !== null && (

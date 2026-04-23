@@ -54,7 +54,7 @@ def solve_greedy(
     current_squad_ids: list,
     budget: float,
     num_transfers: int,
-    horizon: int = 3,
+    horizon: int = 5,
     force_chip: str | None = None,
 ) -> dict:
     """
@@ -158,7 +158,7 @@ def solve_greedy(
     }
 
 
-def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int) -> dict:
+def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int = 5) -> dict:
     """Pick the best 15 players within budget respecting position/club rules."""
     df = df.sort_values("_score", ascending=False).copy()
     squad = []
