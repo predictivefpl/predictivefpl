@@ -1,394 +1,452 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/clerk-react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 
-const ENGINE_URL = 'https://web-production-21545.up.railway.app'
+const ENGINE_URL   = 'https://web-production-21545.up.railway.app'
+const ORACLE_URL   = 'https://predictivefpl-production.up.railway.app'
 const SUPABASE_URL = 'https://bpwopjvvalwuisbbvimj.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwd29wanZ2YWx3dWlzYmJ2aW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5MTI1NjMsImV4cCI6MjA1OTQ4ODU2M30.gFVi_DXbbQGBUSBkzFpbpN4GveDoVrGODOlGLsiSz6Q'
-const ADMIN_EMAIL = 'predictivefpl@outlook.com'
+const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 
-export default function AdminConsole() {
-  const { user } = useUser()
-  const [activeTab, setActiveTab]         = useState('overview')
-  const [search, setSearch]               = useState('')
-  const [engineStatus, setEngineStatus]   = useState(null)
-  const [fplStatus, setFplStatus]         = useState('checking')
-  const [lastSync, setLastSync]           = useState(null)
-  const [maintenanceMode, setMaintenance] = useState(false)
-  const [users, setUsers]                 = useState([])
-  const [usersLoading, setUsersLoading]   = useState(false)
-  const [bootstrap, setBootstrap]         = useState(null)
-
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === ADMIN_EMAIL
-
-  // ── Fetch engine status ──────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchEngine = async () => {
-      try {
-        const res = await fetch(ENGINE_URL + '/api/status')
-        const data = await res.json()
-        setEngineStatus(data)
-      } catch { setEngineStatus({ status: 'error' }) }
-    }
-    fetchEngine()
-    const iv = setInterval(fetchEngine, 30000)
-    return () => clearInterval(iv)
-  }, [])
-
-  // ── Fetch FPL API status + bootstrap data ────────────────────────────────
-  useEffect(() => {
-    const checkFpl = async () => {
-      try {
-        const res = await fetch('/api/fpl?path=' + encodeURIComponent('/bootstrap-static/'))
-        if (res.ok) {
-          const data = await res.json()
-          setBootstrap(data)
-          setFplStatus('active')
-          setLastSync(new Date().toLocaleTimeString())
-        } else { setFplStatus('error') }
-      } catch { setFplStatus('disconnected') }
-    }
-    checkFpl()
-  }, [])
-
-  // ── Fetch real users from Supabase ───────────────────────────────────────
-  useEffect(() => {
-    if (activeTab !== 'users') return
-    setUsersLoading(true)
-    fetch(SUPABASE_URL + '/rest/v1/users?select=*&order=created_at.desc&limit=100', {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-      }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setUsers(data)
-        else setUsers([])
-        setUsersLoading(false)
-      })
-      .catch(() => {
-        // Supabase table may not exist yet - show current admin user
-        setUsers([{
-          name: user?.fullName || 'Admin',
-          email: user?.primaryEmailAddress?.emailAddress || '',
-          fpl_team_id: user?.unsafeMetadata?.fplTeamId || '—',
-          tier: 'Admin',
-          created_at: user?.createdAt,
-          status: 'Active',
-        }])
-        setUsersLoading(false)
-      })
-  }, [activeTab])
-
-  // ── Derived stats from real data ──────────────────────────────────────────
-  const currentGW   = engineStatus?.current_gw || bootstrap?.events?.find(e => e.is_current)?.id || '—'
-  const avgScore    = bootstrap?.events?.find(e => e.is_current)?.average_entry_score || '—'
-  const topScore    = bootstrap?.events?.find(e => e.is_current)?.highest_score || '—'
-  const totalPlayers = bootstrap?.total_players ? bootstrap.total_players.toLocaleString() : '—'
-
-  const filtered = users.filter(u => {
-    const q = search.toLowerCase()
-    return (u.name || '').toLowerCase().includes(q) ||
-           (u.email || '').toLowerCase().includes(q) ||
-           String(u.fpl_team_id || '').includes(q)
-  })
-
-  if (!isAdmin) return (
-    <div className="min-h-screen bg-[#0F121D] flex items-center justify-center text-white">
-      <div className="text-center">
-        <i className="fa-solid fa-lock text-red-400 text-4xl mb-4"/>
-        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-        <p className="text-gray-400">Admin privileges required.</p>
-      </div>
-    </div>
-  )
-
-  const StatusDot = ({ ok }) => (
-    <span className={'flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ' + (ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400')}>
-      <span className={'w-1.5 h-1.5 rounded-full ' + (ok ? 'bg-green-400 animate-pulse' : 'bg-red-400')}/>
-      {ok ? 'Active' : 'Error'}
+// ── helpers ──────────────────────────────────────────────────────────────────
+function Badge({ ok, label }) {
+  return (
+    <span className={'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ' +
+      (ok ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+           : 'bg-red-500/10 text-red-400 border border-red-500/20')}>
+      <span className={'w-1.5 h-1.5 rounded-full flex-shrink-0 ' + (ok ? 'bg-green-400 animate-pulse' : 'bg-red-400')} />
+      {label || (ok ? 'Online' : 'Offline')}
     </span>
   )
+}
+
+function Card({ children, className = '' }) {
+  return (
+    <div className={'rounded-2xl border border-gray-700/40 bg-white/[0.02] ' + className}>
+      {children}
+    </div>
+  )
+}
+
+function Row({ label, value, mono = false }) {
+  return (
+    <div className="flex justify-between items-center px-3 py-2 rounded-lg bg-black/20 text-xs">
+      <span className="text-gray-500">{label}</span>
+      <span className={mono ? 'font-mono text-white' : 'font-semibold text-white'}>{value}</span>
+    </div>
+  )
+}
+
+// ── component ─────────────────────────────────────────────────────────────────
+export default function AdminConsole() {
+  const { user }   = useUser()
+  const navigate   = useNavigate()
+  const isAdmin    = ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress)
+
+  const [tab,          setTab]          = useState('overview')
+  const [engine,       setEngine]       = useState(null)    // ML engine status
+  const [oracle,       setOracle]       = useState(null)    // Oracle engine status
+  const [bootstrap,    setBootstrap]    = useState(null)    // FPL bootstrap
+  const [users,        setUsers]        = useState(null)    // null = not fetched, [] = empty
+  const [loading,      setLoading]      = useState({})
+  const [search,       setSearch]       = useState('')
+  const [syncTime,     setSyncTime]     = useState(null)
+
+  // ── fetch all status ──────────────────────────────────────────────────────
+  const refresh = useCallback(async () => {
+    setSyncTime(null)
+
+    // Oracle (most important — runs the optimiser)
+    fetch(ORACLE_URL + '/oracle/status')
+      .then(r => r.json()).then(setOracle)
+      .catch(() => setOracle({ status: 'error' }))
+
+    // ML engine
+    fetch(ENGINE_URL + '/status')
+      .then(r => r.json()).then(setEngine)
+      .catch(() =>
+        // Try alternate path
+        fetch(ENGINE_URL + '/api/status')
+          .then(r => r.json()).then(setEngine)
+          .catch(() => setEngine({ status: 'error' }))
+      )
+
+    // FPL bootstrap (via Vercel proxy)
+    fetch('/api/fpl?path=' + encodeURIComponent('/bootstrap-static/'))
+      .then(r => r.json())
+      .then(d => { setBootstrap(d); setSyncTime(new Date().toLocaleTimeString()) })
+      .catch(() => setBootstrap(null))
+  }, [])
+
+  useEffect(() => {
+    if (!isAdmin) { navigate('/dashboard'); return }
+    refresh()
+    const iv = setInterval(refresh, 45000)
+    return () => clearInterval(iv)
+  }, [isAdmin])
+
+  // ── fetch users when tab opens ────────────────────────────────────────────
+  useEffect(() => {
+    if (tab === 'users' && users === null) fetchUsers()
+  }, [tab])
+
+  const fetchUsers = async () => {
+    setLoading(l => ({ ...l, users: true }))
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/users?select=id,email,name,fpl_team_id,tier,created_at&order=created_at.desc&limit=500`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      )
+      const data = await r.json()
+      setUsers(Array.isArray(data) ? data : [])
+    } catch {
+      setUsers([])
+    }
+    setLoading(l => ({ ...l, users: false }))
+  }
+
+  const retrain = async (which) => {
+    const key = `retrain_${which}`
+    setLoading(l => ({ ...l, [key]: true }))
+    try {
+      const url = which === 'oracle'
+        ? ORACLE_URL + '/oracle/train'
+        : ENGINE_URL + '/api/train'
+      await fetch(url, { method: 'POST' })
+      setTimeout(refresh, 4000)
+    } catch { /* silent */ }
+    setLoading(l => ({ ...l, [key]: false }))
+  }
+
+  // ── derived values — only show what we actually have ─────────────────────
+  const curEvent    = bootstrap?.events?.find(e => e.is_current)
+  const currentGW   = curEvent?.id
+  const avgScore    = curEvent?.average_entry_score
+  const topScore    = curEvent?.highest_score
+  const totalFPL    = bootstrap?.total_players
+
+  const oracleOnline = oracle?.status === 'ok'
+  const engineOnline = engine?.status === 'ok' || engine?.status === 'online'
+  const fplOnline    = !!bootstrap
+
+  const filteredUsers = (users || []).filter(u =>
+    [u.name, u.email, String(u.fpl_team_id || '')].join(' ')
+      .toLowerCase().includes(search.toLowerCase())
+  )
+
+  // ── not admin ─────────────────────────────────────────────────────────────
+  if (!isAdmin) return null
 
   return (
-    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
-      {maintenanceMode && (
-        <div className="fixed inset-0 bg-yellow-500/10 border-4 border-yellow-500/30 pointer-events-none z-50">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-6 py-2 rounded-full text-sm font-bold">
-            <i className="fa-solid fa-triangle-exclamation mr-2"/>MAINTENANCE MODE ACTIVE
-          </div>
-        </div>
-      )}
-      <Sidebar/>
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <main className="flex-1 overflow-y-auto custom-scroll p-6 md:p-8 max-w-7xl mx-auto w-full">
+    <div className="min-h-screen bg-[#0F121D] flex text-white">
+      <Sidebar />
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8">
 
           {/* Header */}
-          <div className="mb-8 flex items-end justify-between gap-4 flex-wrap">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Admin Console</h1>
-              <p className="text-gray-400">System management, user oversight, and monitoring</p>
+              <h1 className="text-4xl font-black">Admin Console</h1>
+              {syncTime && <p className="text-xs text-gray-500 mt-1">Last synced {syncTime}</p>}
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => window.location.reload()}
-                className="neon-button rounded-xl px-5 py-2.5 font-medium flex items-center gap-2 text-sm">
-                <i className="fa-solid fa-sync"/> Refresh
-              </button>
-            </div>
+            <button onClick={refresh}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-all">
+              <i className="fa-solid fa-rotate text-xs" /> Refresh
+            </button>
           </div>
 
-          {/* Real KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* KPI row — only shown when we have real data */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
-              { label: 'Current GW',       value: currentGW,    icon: 'fa-calendar',      color: 'text-blue-400' },
-              { label: 'Avg GW Score',     value: avgScore,     icon: 'fa-chart-bar',     color: 'text-green-400' },
-              { label: 'Top Score',        value: topScore,     icon: 'fa-trophy',         color: 'text-yellow-400' },
-              { label: 'FPL Players',      value: totalPlayers, icon: 'fa-users',          color: 'text-purple-400' },
-            ].map((k, i) => (
-              <div key={i} className="glass-card rounded-2xl p-5 border border-gray-700/50">
+              { label: 'Gameweek',   val: currentGW,                     icon: 'fa-calendar-week', col: 'text-blue-400' },
+              { label: 'GW Average', val: avgScore,                       icon: 'fa-chart-bar',     col: 'text-green-400' },
+              { label: 'GW Top Score',val: topScore,                      icon: 'fa-trophy',        col: 'text-yellow-400' },
+              { label: 'FPL Players', val: totalFPL?.toLocaleString(),    icon: 'fa-users',         col: 'text-purple-400' },
+            ].map(({ label, val, icon, col }) => (
+              <Card key={label} className="p-5">
                 <div className="flex justify-between items-start mb-3">
-                  <p className="text-xs text-gray-400 font-medium">{k.label}</p>
-                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                    <i className={'fa-solid ' + k.icon + ' text-sm ' + k.color}/>
-                  </div>
+                  <p className="text-xs text-gray-500">{label}</p>
+                  <i className={`fa-solid ${icon} text-sm ${col}`} />
                 </div>
-                <h3 className={'text-2xl font-black ' + k.color}>{value => value !== '—' ? value : <span className="text-gray-600">—</span>}{k.value}</h3>
-              </div>
+                {val != null
+                  ? <p className={`text-3xl font-black ${col}`}>{val}</p>
+                  : <div className="h-8 w-16 rounded-lg bg-white/5 animate-pulse" />
+                }
+              </Card>
             ))}
           </div>
 
-          {/* System Status Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Status cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
-            {/* Service Health */}
-            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
-              <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-circle-nodes text-blue-400"/> Service Health
-              </h3>
-              <div className="space-y-2">
-                {[
-                  ['FPL API', fplStatus === 'active'],
-                  ['ML Engine', engineStatus?.status === 'ok'],
-                  ['Models Loaded', engineStatus?.models_loaded === true],
-                  ['Predictions Cached', engineStatus?.predictions_cached === true],
-                  ['Clerk Auth', true],
-                ].map(([label, ok]) => (
-                  <div key={label} className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl">
-                    <span className="text-sm text-gray-300">{label}</span>
-                    <StatusDot ok={ok}/>
-                  </div>
-                ))}
+            {/* FPL API */}
+            <Card className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm font-bold flex items-center gap-2">
+                  <i className="fa-solid fa-futbol text-blue-400 text-xs" /> FPL API
+                </span>
+                {fplOnline !== null
+                  ? <Badge ok={fplOnline} />
+                  : <div className="h-5 w-16 rounded-full bg-white/5 animate-pulse" />
+                }
               </div>
-            </div>
+              <div className="space-y-1.5">
+                {fplOnline ? (
+                  <>
+                    <Row label="Current GW"    value={currentGW ?? '—'} />
+                    <Row label="GW Deadline"   value={curEvent?.deadline_time ? new Date(curEvent.deadline_time).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'} />
+                    <Row label="Total Players" value={totalFPL?.toLocaleString() ?? '—'} />
+                    <Row label="Teams"         value={bootstrap?.teams?.length ?? '—'} />
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-600 py-2">Waiting for FPL data...</p>
+                )}
+              </div>
+            </Card>
 
-            {/* Engine Details */}
-            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
-              <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-robot text-green-400"/> ML Engine
-              </h3>
-              <div className="space-y-2">
-                {(engineStatus ? [
-                  ['Status',       engineStatus.status || '—'],
-                  ['Current GW',   engineStatus.current_gw || '—'],
-                  ['Training',     engineStatus.training_status || '—'],
-                  ['Last Updated', engineStatus.last_updated ? new Date(engineStatus.last_updated).toLocaleDateString() : '—'],
-                  ['Last Sync',    lastSync || 'Pending...'],
-                ] : [['Loading...', '—']]).map(([l, v]) => (
-                  <div key={l} className="flex justify-between items-center p-2.5 bg-[#0F121D]/50 rounded-xl">
-                    <span className="text-xs text-gray-400">{l}</span>
-                    <span className="text-xs font-bold text-white">{v}</span>
-                  </div>
-                ))}
+            {/* Oracle Engine */}
+            <Card className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm font-bold flex items-center gap-2">
+                  <i className="fa-solid fa-brain text-purple-400 text-xs" /> Oracle Engine
+                </span>
+                {oracle
+                  ? <Badge ok={oracleOnline} />
+                  : <div className="h-5 w-16 rounded-full bg-white/5 animate-pulse" />
+                }
               </div>
-            </div>
+              <div className="space-y-1.5 mb-3">
+                {oracle ? (
+                  <>
+                    <Row label="Predictions" value={oracle.predictions_cached ? '✓ Cached' : '✗ Not cached'} />
+                    <Row label="Models"      value={oracle.models_available   ? '✓ Loaded' : '✗ Missing'} />
+                    <Row label="Training"    value={oracle.training_status ?? '—'} />
+                    <Row label="GW"          value={oracle.current_gw ?? '—'} />
+                    <Row label="Updated"     value={oracle.last_updated ? new Date(oracle.last_updated).toLocaleTimeString() : '—'} />
+                  </>
+                ) : (
+                  [1,2,3].map(i => <div key={i} className="h-7 rounded-lg bg-white/5 animate-pulse" />)
+                )}
+              </div>
+              <button
+                onClick={() => retrain('oracle')}
+                disabled={!!loading.retrain_oracle}
+                className="w-full py-2 rounded-xl text-xs font-bold border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition-all disabled:opacity-40">
+                {loading.retrain_oracle ? <><i className="fa-solid fa-spinner fa-spin mr-1" />Retraining...</> : 'Force Retrain Oracle'}
+              </button>
+            </Card>
 
-            {/* Controls */}
-            <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
-              <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                <i className="fa-solid fa-toggle-on text-blue-400"/> Controls
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl">
-                  <div>
-                    <p className="text-sm text-white font-medium">Maintenance Mode</p>
-                    <p className="text-[10px] text-gray-500">Shows overlay on all pages</p>
-                  </div>
-                  <button onClick={() => setMaintenance(!maintenanceMode)}
-                    className={'w-12 h-6 rounded-full relative transition-colors ' + (maintenanceMode ? 'bg-yellow-500' : 'bg-gray-700')}>
-                    <div className={'w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ' + (maintenanceMode ? 'right-0.5' : 'left-0.5')}/>
-                  </button>
-                </div>
-                <a href={ENGINE_URL + '/api/status'} target="_blank" rel="noreferrer"
-                  className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                  <div>
-                    <p className="text-sm text-white font-medium">Engine API</p>
-                    <p className="text-[10px] text-gray-500">Open Railway status endpoint</p>
-                  </div>
-                  <i className="fa-solid fa-arrow-up-right-from-square text-gray-400 text-xs"/>
-                </a>
-                <a href="https://dashboard.clerk.com" target="_blank" rel="noreferrer"
-                  className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                  <div>
-                    <p className="text-sm text-white font-medium">Clerk Dashboard</p>
-                    <p className="text-[10px] text-gray-500">Manage auth & users</p>
-                  </div>
-                  <i className="fa-solid fa-arrow-up-right-from-square text-gray-400 text-xs"/>
-                </a>
-                <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer"
-                  className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                  <div>
-                    <p className="text-sm text-white font-medium">Supabase</p>
-                    <p className="text-[10px] text-gray-500">Database & storage</p>
-                  </div>
-                  <i className="fa-solid fa-arrow-up-right-from-square text-gray-400 text-xs"/>
-                </a>
+            {/* ML Engine */}
+            <Card className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm font-bold flex items-center gap-2">
+                  <i className="fa-solid fa-robot text-green-400 text-xs" /> ML Engine
+                </span>
+                {engine
+                  ? <Badge ok={engineOnline} />
+                  : <div className="h-5 w-16 rounded-full bg-white/5 animate-pulse" />
+                }
               </div>
-            </div>
+              <div className="space-y-1.5 mb-3">
+                {engine ? (
+                  Object.entries(engine)
+                    .filter(([k]) => !['status'].includes(k))
+                    .slice(0, 5)
+                    .map(([k, v]) => (
+                      <Row key={k} label={k.replace(/_/g,' ')} value={String(v)} />
+                    ))
+                ) : (
+                  [1,2,3].map(i => <div key={i} className="h-7 rounded-lg bg-white/5 animate-pulse" />)
+                )}
+                {engine?.status === 'error' && (
+                  <p className="text-xs text-red-400 px-1">Engine unreachable. Check Railway logs.</p>
+                )}
+              </div>
+              <button
+                onClick={() => retrain('engine')}
+                disabled={!!loading.retrain_engine}
+                className="w-full py-2 rounded-xl text-xs font-bold border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-all disabled:opacity-40">
+                {loading.retrain_engine ? <><i className="fa-solid fa-spinner fa-spin mr-1" />Retraining...</> : 'Force Retrain Engine'}
+              </button>
+            </Card>
+          </div>
+
+          {/* Quick links */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {[
+              ['Clerk',     'fa-user-shield',  '#3b82f6', 'https://dashboard.clerk.com'],
+              ['Supabase',  'fa-database',     '#10b981', 'https://supabase.com/dashboard'],
+              ['Railway',   'fa-train',        '#a855f7', 'https://railway.app/dashboard'],
+              ['Vercel',    'fa-triangle-exclamation', '#e5e7eb', 'https://vercel.com/dashboard'],
+            ].map(([label, icon, col, url]) => (
+              <a key={label} href={url} target="_blank" rel="noreferrer"
+                className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-700/50 hover:border-gray-500/70 bg-white/[0.02] text-gray-400 hover:text-white transition-all group">
+                <i className={`fa-solid ${icon} text-sm`} style={{ color: col }} />
+                <span className="text-xs font-medium">{label}</span>
+                <i className="fa-solid fa-arrow-up-right-from-square text-[9px] ml-auto opacity-30 group-hover:opacity-70" />
+              </a>
+            ))}
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-800 mb-6">
-            {[['overview','Overview'],['users','Users'],['engine','Engine']].map(([id,label]) => (
-              <button key={id} onClick={() => setActiveTab(id)}
-                className={'px-6 py-3 text-sm font-medium transition-colors border-b-2 ' + (activeTab===id ? 'text-blue-400 border-blue-400' : 'text-gray-400 border-transparent hover:text-white')}>
+          <div className="flex border-b border-gray-800/50 mb-6">
+            {[['users', 'Users'], ['endpoints', 'Engine Endpoints']].map(([id, label]) => (
+              <button key={id} onClick={() => setTab(id)}
+                className={'px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ' +
+                  (tab === id ? 'text-blue-400 border-blue-400' : 'text-gray-500 border-transparent hover:text-white')}>
                 {label}
               </button>
             ))}
           </div>
 
-          {/* Overview Tab */}
-          {activeTab === 'overview' && bootstrap && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[
-                ['Total FPL Players',  bootstrap.total_players?.toLocaleString(), 'fa-users', 'text-blue-400'],
-                ['Total Teams',        bootstrap.total_players?.toLocaleString(), 'fa-shield', 'text-green-400'],
-                ['Current GW',         currentGW, 'fa-calendar', 'text-yellow-400'],
-                ['Avg Score GW'+currentGW, avgScore, 'fa-chart-line', 'text-purple-400'],
-                ['Top Score GW'+currentGW, topScore, 'fa-trophy', 'text-yellow-400'],
-                ['Active Teams',       bootstrap.events?.find(e=>e.is_current)?.most_selected ? '—' : '—', 'fa-circle-check', 'text-green-400'],
-              ].map(([l,v,ic,c]) => (
-                <div key={l} className="glass-card rounded-xl p-4 border border-gray-700/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className={'fa-solid ' + ic + ' text-sm ' + c}/>
-                    <p className="text-xs text-gray-400 truncate">{l}</p>
-                  </div>
-                  <p className={'text-xl font-black ' + c}>{v || '—'}</p>
+          {/* Users tab */}
+          {tab === 'users' && (
+            <div>
+              <div className="flex items-center gap-4 mb-4 flex-wrap">
+                <div className="relative">
+                  <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs" />
+                  <input
+                    type="text" value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search email, name, team ID..."
+                    className="bg-white/3 border border-gray-700 rounded-xl pl-8 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 w-72"
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Users Tab */}
-          {activeTab === 'users' && (
-            <div className="space-y-4">
-              <div className="glass-card rounded-2xl p-4 flex flex-col lg:flex-row gap-4 justify-between items-center border border-gray-700/50">
-                <div className="relative w-full lg:w-96">
-                  <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"/>
-                  <input type="text" placeholder="Search name, email or Team ID..."
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    className="w-full bg-[#1A1D2E] border border-gray-700 text-white rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-blue-500/50 text-sm"/>
-                </div>
-                <p className="text-xs text-gray-500">{filtered.length} user{filtered.length !== 1 ? 's' : ''} found</p>
+                {users !== null && (
+                  <p className="text-xs text-gray-500 ml-auto">
+                    {filteredUsers.length} of {users.length} users
+                  </p>
+                )}
               </div>
-              {usersLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <i className="fa-solid fa-spinner fa-spin text-blue-400 text-2xl"/>
+
+              {loading.users ? (
+                <div className="flex items-center justify-center py-20 text-gray-600">
+                  <i className="fa-solid fa-spinner fa-spin text-2xl" />
                 </div>
+              ) : users === null ? (
+                <div className="flex items-center justify-center py-20 text-gray-600">
+                  <p className="text-sm">Loading users...</p>
+                </div>
+              ) : users.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <i className="fa-solid fa-database text-gray-700 text-3xl mb-3 block" />
+                  <p className="text-gray-500 text-sm">No users found in Supabase.</p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Check that the <code className="bg-white/5 px-1 rounded">users</code> table exists and has Row Level Security configured.
+                  </p>
+                </Card>
               ) : (
-                <div className="glass-card rounded-2xl border border-gray-700/50 overflow-hidden">
+                <Card className="overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-[#1A1D2E]/50">
-                        <tr className="text-xs uppercase tracking-wider text-gray-500 border-b border-gray-800">
-                          {['User','Email','Team ID','Tier','Joined','Status'].map(h => (
-                            <th key={h} className="px-6 py-4 font-semibold whitespace-nowrap">{h}</th>
+                    <table className="w-full text-sm">
+                      <thead className="border-b border-gray-800/60">
+                        <tr className="text-[11px] text-gray-500 uppercase tracking-wider">
+                          {['User', 'Email', 'FPL Team ID', 'Plan', 'Joined'].map(h => (
+                            <th key={h} className="px-5 py-3 text-left font-semibold">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                              <i className="fa-solid fa-users text-2xl mb-2 block opacity-30"/>
-                              No users found. Connect the Supabase <code className="text-xs bg-white/5 px-1 rounded">users</code> table to populate this list.
-                            </td>
-                          </tr>
-                        ) : filtered.map((u, i) => (
-                          <tr key={i} className="border-b border-gray-800/50 hover:bg-[#1A1D2E]/30 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-bold text-blue-400">
-                                  {(u.name || u.email || '?').charAt(0).toUpperCase()}
+                        {filteredUsers.map((u, i) => (
+                          <tr key={u.id || i} className="border-b border-gray-800/30 hover:bg-white/[0.02] transition-colors">
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-xs font-black text-blue-400 flex-shrink-0">
+                                  {((u.name || u.email || '?')[0]).toUpperCase()}
                                 </div>
-                                <p className="font-bold text-white whitespace-nowrap">{u.name || '—'}</p>
+                                <span className="font-medium text-white">{u.name || <span className="text-gray-600 italic text-xs">No name</span>}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-gray-300 whitespace-nowrap">{u.email || '—'}</td>
-                            <td className="px-6 py-4 text-blue-400 font-mono text-xs">{u.fpl_team_id || '—'}</td>
-                            <td className="px-6 py-4">
-                              <span className={'px-3 py-1 rounded text-xs font-medium border ' + (u.tier === 'Admin' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : u.tier === 'Pro' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-gray-700/50 text-gray-400 border-gray-700')}>
-                                {u.tier || 'Free'}
+                            <td className="px-5 py-3 text-gray-400 text-xs">{u.email || '—'}</td>
+                            <td className="px-5 py-3">
+                              {u.fpl_team_id
+                                ? <a href={`https://fantasy.premierleague.com/entry/${u.fpl_team_id}/history`} target="_blank" rel="noreferrer"
+                                    className="font-mono text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                                    {u.fpl_team_id}
+                                  </a>
+                                : <span className="text-gray-600 text-xs italic">Not set</span>
+                              }
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className={'px-2 py-0.5 rounded text-[10px] font-bold ' +
+                                (u.tier === 'pro' ? 'bg-purple-500/15 text-purple-400' :
+                                 u.tier === 'premium' ? 'bg-yellow-500/15 text-yellow-400' :
+                                 'bg-gray-700/40 text-gray-500')}>
+                                {u.tier ? u.tier.charAt(0).toUpperCase() + u.tier.slice(1) : 'Free'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-gray-400 whitespace-nowrap text-xs">
-                              {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={'px-3 py-1 rounded-full text-xs font-bold ' + (u.status === 'Active' || !u.status ? 'bg-green-500/15 text-green-400 border border-green-500/30' : 'bg-gray-500/15 text-gray-400 border border-gray-500/30')}>
-                                {u.status || 'Active'}
-                              </span>
+                            <td className="px-5 py-3 text-gray-500 text-xs">
+                              {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—'}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </Card>
               )}
             </div>
           )}
 
-          {/* Engine Tab */}
-          {activeTab === 'engine' && (
+          {/* Endpoints tab */}
+          {tab === 'endpoints' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                  <i className="fa-solid fa-robot text-green-400"/> ML Engine Status
-                </h3>
-                {engineStatus ? (
-                  <div className="space-y-3">
-                    {Object.entries(engineStatus).map(([k, v]) => (
-                      <div key={k} className="flex justify-between items-center p-3 bg-[#0F121D]/50 rounded-xl">
-                        <span className="text-sm text-gray-400 capitalize">{k.replace(/_/g,' ')}</span>
-                        <span className={'text-sm font-bold ' + (v === true ? 'text-green-400' : v === false ? 'text-red-400' : 'text-white')}>
-                          {String(v)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-sm">Loading engine status...</p>
-                )}
-              </div>
-              <div className="glass-card rounded-2xl p-6 border border-gray-700/50">
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 flex items-center gap-2">
-                  <i className="fa-solid fa-link text-blue-400"/> Engine Endpoints
-                </h3>
-                <div className="space-y-2">
-                  {['/api/status','/api/predictions','/api/captain','/api/differentials','/api/essentials','/api/optimise'].map(ep => (
-                    <a key={ep} href={ENGINE_URL + ep} target="_blank" rel="noreferrer"
-                      className="flex items-center justify-between p-3 bg-[#0F121D]/50 rounded-xl hover:bg-white/5 transition-colors group">
-                      <span className="text-xs font-mono text-blue-400 group-hover:text-blue-300">{ep}</span>
-                      <i className="fa-solid fa-arrow-up-right-from-square text-gray-600 text-xs"/>
+              <Card className="p-5">
+                <p className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <i className="fa-solid fa-brain text-purple-400 text-xs" /> Oracle Engine
+                  <span className="ml-auto text-[10px] font-mono text-gray-600 truncate">{ORACLE_URL}</span>
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { path: '/oracle/status',      method: 'GET',  desc: 'Engine health + cache state' },
+                    { path: '/oracle/predictions', method: 'GET',  desc: 'All player xP predictions' },
+                    { path: '/oracle/fixtures',    method: 'GET',  desc: 'DGW/BGW fixture map' },
+                    { path: '/oracle/optimise',    method: 'POST', desc: 'Run transfer optimiser' },
+                    { path: '/oracle/train',       method: 'POST', desc: 'Trigger model retrain' },
+                    { path: '/oracle/cron',        method: 'POST', desc: 'Daily cron retrain hook' },
+                  ].map(({ path, method, desc }) => (
+                    <a key={path} href={ORACLE_URL + path} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-black/20 hover:bg-white/5 transition-colors group">
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${method === 'GET' ? 'bg-green-500/15 text-green-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                        {method}
+                      </span>
+                      <span className="text-xs font-mono text-purple-300 group-hover:text-purple-200">{path}</span>
+                      <span className="text-[10px] text-gray-600 ml-auto hidden md:block">{desc}</span>
                     </a>
                   ))}
                 </div>
-              </div>
+              </Card>
+
+              <Card className="p-5">
+                <p className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <i className="fa-solid fa-robot text-green-400 text-xs" /> ML Engine
+                  <span className="ml-auto text-[10px] font-mono text-gray-600 truncate">{ENGINE_URL}</span>
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { path: '/status',              method: 'GET',  desc: 'Engine health' },
+                    { path: '/api/predictions',     method: 'GET',  desc: 'Player predictions' },
+                    { path: '/api/captain',         method: 'GET',  desc: 'Captain picks' },
+                    { path: '/api/differentials',   method: 'GET',  desc: 'Differential picks' },
+                    { path: '/api/essentials',      method: 'GET',  desc: 'Essential transfers' },
+                    { path: '/api/optimise',        method: 'POST', desc: 'Legacy optimiser' },
+                    { path: '/api/train',           method: 'POST', desc: 'Trigger retrain' },
+                  ].map(({ path, method, desc }) => (
+                    <a key={path} href={ENGINE_URL + path} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-black/20 hover:bg-white/5 transition-colors group">
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${method === 'GET' ? 'bg-green-500/15 text-green-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                        {method}
+                      </span>
+                      <span className="text-xs font-mono text-green-300 group-hover:text-green-200">{path}</span>
+                      <span className="text-[10px] text-gray-600 ml-auto hidden md:block">{desc}</span>
+                    </a>
+                  ))}
+                </div>
+              </Card>
             </div>
           )}
 
-        </main>
+        </div>
       </div>
     </div>
   )
