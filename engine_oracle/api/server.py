@@ -288,7 +288,7 @@ async def _run_pipeline():
         preds_df = predict_oracle_xp(
             combined, players_df, fixtures_df,
             current_gw, models=models, horizon=8
-        )      )
+        )
 
         # Serialise
         preds_list = preds_df.to_dict(orient="records")
