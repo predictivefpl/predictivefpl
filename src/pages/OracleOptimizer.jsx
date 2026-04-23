@@ -80,7 +80,7 @@ export default function OracleOptimizer() {
   const [teamMap, setTeamMap]       = useState({})   // teamId -> shortName
   const [usedChips, setUsedChips]   = useState([])   // chips used by user from FPL
 
-  const [budget, setBudget]         = useState(100)
+  const [budget, setBudget]         = useState(null)  // fetched from FPL, not user-editable
   const [horizon, setHorizon]       = useState(8)
   const [freeTx, setFreeTx]         = useState(1)
   const [chips, setChips]           = useState({ wildcard:true, freehit:true, benchboost:true, triplecaptain:true })
@@ -645,7 +645,7 @@ export default function OracleOptimizer() {
               </div>
               <div>
                 <div className="flex justify-between mb-1">
-                  <label className="text-xs text-gray-400">Free Transfers</label>
+                  <label className="text-xs text-gray-400">How Many Transfers</label>
                 </div>
                 <div className="flex gap-1.5">
                   {[0,1,2,3,4,5,6].map(n => (
@@ -656,15 +656,15 @@ export default function OracleOptimizer() {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1.5">Budget</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">£</span>
-                  <input type="number" value={budget} onChange={e=>setBudget(+e.target.value)} step="0.1" min="80" max="110"
-                    className="flex-1 bg-[#0F121D] border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500"/>
-                  <span className="text-xs text-gray-400">m</span>
+              {/* Budget — fetched from FPL, display only */}
+              {budget !== null && (
+                <div className="flex items-center justify-between p-2 rounded-xl" style={{background:'rgba(168,85,247,0.06)',border:'1px solid rgba(168,85,247,0.15)'}}>
+                  <span className="text-xs text-gray-400 flex items-center gap-1.5">
+                    <i className="fa-solid fa-wallet text-purple-400 text-[10px]"/> Available Budget
+                  </span>
+                  <span className="text-sm font-black text-purple-300">£{Number(budget).toFixed(1)}m</span>
                 </div>
-              </div>
+              )}
               <div>
                 <label className="text-xs text-gray-400 block mb-1.5">Objective</label>
                 {[['total_xp','Max Total xP'],['min_variance','Min Variance'],['top10k','Top 10k']].map(([k,l]) => (
