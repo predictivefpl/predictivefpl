@@ -146,19 +146,31 @@ async def optimise(req: OptimiseReq):
     if not CACHE["predictions"]:
         raise HTTPException(503, "No predictions cached. POST /oracle/train first.")
     preds_df = pd.DataFrame(CACHE["predictions"])
-    oracle_req = OracleRequest(
-        budget=req.budget,
-        horizon=min(req.horizon, 8),
-        num_free_transfers=req.num_free_transfers,
-        current_squad_ids=req.current_squad_ids,
-        objective=req.objective,
-        wildcard_available=req.wildcard_available,
-        freehit_available=req.freehit_available,
-        benchboost_available=req.benchboost_available,
-        triplecaptain_available=req.triplecaptain_available,
-        force_chip=req.force_chip,
-    )
-    result = solve_oracle(preds_df, oracle_req)
+
+    # Try requested transfers first, fall back if infeasible (budget too tight)
+    result = None
+    for n_tx in range(req.num_free_transfers, -1, -1):
+        oracle_req = OracleRequest(
+            budget=req.budget,
+            horizon=min(req.horizon, 8),
+            num_free_transfers=n_tx,
+            current_squad_ids=req.current_squad_ids,
+            objective=req.objective,
+            wildcard_available=req.wildcard_available,
+            freehit_available=req.freehit_available,
+            benchboost_available=req.benchboost_available,
+            triplecaptain_available=req.triplecaptain_available,
+            force_chip=req.force_chip,
+        )
+        result = solve_oracle(preds_df, oracle_req)
+        if result.status in ("Optimal", "Feasible"):
+            if n_tx < req.num_free_transfers:
+                print(f"  Fell back to {n_tx} transfers (budget too tight for {req.num_free_transfers})")
+            break
+
+    if not result or result.status not in ("Optimal", "Feasible"):
+        raise HTTPException(500, f"Solver infeasible even with 0 transfers. Check budget ({req.budget}m).")
+
     return {
         "status":        result.status,
         "squad":         result.squad,
@@ -172,6 +184,7 @@ async def optimise(req: OptimiseReq):
         "transfer_plan": result.transfer_plan,
         "dgw_map":       CACHE["dgw_map"],
         "current_gw":    CACHE["current_gw"],
+        "transfers_applied": oracle_req.num_free_transfers,
     }
 
 

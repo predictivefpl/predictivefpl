@@ -178,7 +178,7 @@ def solve_oracle(
 
     for t in range(T):
         # Budget
-        prob += pulp.lpSum(prices[i] * x[i][t] for i in range(N)) <= req.budget
+        prob += pulp.lpSum(prices[i] * x[i][t] for i in range(N)) <= req.budget + 0.1  # 0.1m tolerance for rounding
 
         # Squad size
         prob += pulp.lpSum(x[i][t] for i in range(N)) == SQUAD_SIZE
