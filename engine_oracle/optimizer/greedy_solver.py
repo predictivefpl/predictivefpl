@@ -66,14 +66,17 @@ def solve_greedy(
     df = df[df["price"] > 0]
     df["_score"] = df.apply(lambda r: _score(r.to_dict(), horizon), axis=1)
 
+    # Wildcard / Free Hit: ignore current squad, pick best 15 from scratch
+    if force_chip in ("wildcard", "freehit"):
+        result = _solve_best_squad(df, budget, horizon)
+        result["force_chip"] = force_chip
+        result["chip_plan"]  = {0: force_chip}
+        return result
+
     pid_map = {int(r["player_id"]): r.to_dict() for _, r in df.iterrows()}
 
     # Build starting squad
     squad = [pid_map[pid] for pid in current_squad_ids if pid in pid_map]
-
-    # Wildcard / Free Hit: pick best 15 from scratch
-    if force_chip in ("wildcard", "freehit"):
-        return _solve_best_squad(df, budget, horizon)
 
     # Greedy: each iteration find the single best (out, in) swap
     transfers_out = []
