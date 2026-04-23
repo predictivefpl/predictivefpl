@@ -360,8 +360,20 @@ export default function OracleOptimizer() {
 
     // ── xP Horizon Timeline (replaces bar chart) ───────────────────────────────
   const renderXPTimeline = () => {
-    if (!result?.xp_by_gw?.length) return null
-    const maxXP = Math.max(...result.xp_by_gw, 1)
+    if (!result?.squad?.length) return null
+    // Build per-GW xP from squad data (greedy solver returns squad with xp_gw1..5)
+    const squad = result.squad || []
+    const starters = squad.filter(p => p.is_starter)
+    const captain  = starters.find(p => p.is_captain)
+    const builtXP  = Array.from({length: horizon}, (_, t) => {
+      const col = `xp_gw${t+1}`
+      let total = starters.reduce((sum, p) => sum + (Number(p[col]) || 0), 0)
+      if (captain) total += Number(captain[`xp_gw${t+1}`] || 0)  // captain double
+      return Math.round(total * 10) / 10
+    })
+    const xpByGW = builtXP.length > 0 ? builtXP : (result.xp_by_gw || [])
+    if (!xpByGW.length) return null
+    const maxXP = Math.max(...xpByGW, 1)
     return (
       <GlassCard className="p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
@@ -375,7 +387,7 @@ export default function OracleOptimizer() {
           </div>
         </div>
         <div className="flex gap-2">
-          {result.xp_by_gw.map((xp, t) => {
+          {xpByGW.map((xp, t) => {
             const gw     = (result.current_gw || currentGW) + t
             const isDGW  = (dgwMap[gw] || []).length >= 2
             const isBGW  = (bgwMap[gw] || []).length >= 5
@@ -409,7 +421,7 @@ export default function OracleOptimizer() {
           })}
         </div>
         <div className="flex justify-between mt-3 pt-3 border-t border-white/5 text-xs">
-          <span className="text-gray-400">Total: <span className="font-bold text-white">{result.total_xp?.toFixed(1)} xP</span></span>
+          <span className="text-gray-400">Total: <span className="font-bold text-white">{xpByGW.reduce((a,b)=>a+b,0).toFixed(1)} xP</span></span>
           <span className="text-gray-400">Net: <span className="font-bold text-purple-400">{result.net_xp?.toFixed(1)} xP</span></span>
           <span className="text-gray-400">Option value: <span className="font-bold text-blue-400">+{result.option_value?.toFixed(1)}</span></span>
         </div>
@@ -735,9 +747,9 @@ export default function OracleOptimizer() {
               <div>
                 <div className="flex justify-between mb-1">
                   <label className="text-xs text-gray-400">Horizon</label>
-                  <span className="text-xs font-bold text-purple-400">{horizon} GWs</span>
+                  <span className="text-xs font-bold text-purple-400">{horizon} GW{horizon>1?'s':''}</span>
                 </div>
-                <input type="range" min="1" max="8" value={horizon} onChange={e=>setHorizon(+e.target.value)} className="w-full accent-purple-500"/>
+                <input type="range" min="1" max="5" value={horizon} onChange={e=>setHorizon(+e.target.value)} className="w-full accent-purple-500"/>
               </div>
               <div>
                 <label className="text-xs text-gray-400 block mb-2">How Many Transfers</label>
