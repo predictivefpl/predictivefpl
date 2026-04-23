@@ -30,7 +30,7 @@ export default function App() {
         <Route path="/team" element={<ProtectedRoute><MyTeam /></ProtectedRoute>} />
         <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminConsole /></ProtectedRoute>} />
-        <Route path="/optimizer" element={<ProtectedRoute><OptimizerSettings /></ProtectedRoute>} />
+        <Route path="/optimizer" element={<Navigate to="/oracle" replace />} />
         <Route path="/rivals" element={<ProtectedRoute><Rivals /></ProtectedRoute>} />
         <Route path="/oracle" element={<ProtectedRoute><OracleOptimizer /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />

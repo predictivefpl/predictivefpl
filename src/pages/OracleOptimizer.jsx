@@ -100,7 +100,6 @@ export default function OracleOptimizer() {
   const chipFPLKey = { wildcard:'wildcard', freehit:'freehit', benchboost:'bboost', triplecaptain:'3xc' }
 
   useEffect(() => {
-    if (!isAdmin) { navigate('/dashboard'); return }
     fetchStatus().then(s => {
       // Auto-train in background if predictions not cached
       if (!s?.predictions_cached && s?.status === 'ok') {
@@ -683,7 +682,7 @@ export default function OracleOptimizer() {
               <span className="text-xl font-black bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Oracle Optimizer</span>
               <span className="text-xs text-gray-500 ml-2">8-GW MIP Engine</span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-yellow-400/10 text-yellow-400 border border-yellow-400/20">ADMIN ONLY</span>
+
           </div>
           <div className="flex items-center gap-3">
             {status && (

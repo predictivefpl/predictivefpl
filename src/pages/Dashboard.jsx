@@ -208,7 +208,7 @@ export default function Dashboard() {
                     <i className="fa-solid fa-robot text-blue-400"/> AI Command Center
                     {engineStatus?.predictions_cached && <span className="text-xs text-green-400 font-normal ml-2">(ML Powered)</span>}
                   </h2>
-                  <button onClick={() => navigate("/optimizer")} className="neon-button rounded-xl py-3 px-5 font-bold text-sm flex items-center gap-2">
+                  <button onClick={() => navigate("/oracle")} className="neon-button rounded-xl py-3 px-5 font-bold text-sm flex items-center gap-2">
                     <i className="fa-solid fa-sparkles"/> Optimize My Team
                   </button>
                 </div>
@@ -309,7 +309,7 @@ export default function Dashboard() {
                     <span className="flex items-center gap-2"><i className="fa-solid fa-brain text-blue-400"/> AI Insights</span>
                     <i className="fa-solid fa-arrow-right text-gray-500"/>
                   </button>
-                  <button onClick={() => navigate("/optimizer")} className="w-full bg-[#1A1D2E] hover:bg-[#252A3F] text-white rounded-xl py-4 px-4 font-bold text-sm flex justify-between items-center border border-gray-700 transition-colors">
+                  <button onClick={() => navigate("/oracle")} className="w-full bg-[#1A1D2E] hover:bg-[#252A3F] text-white rounded-xl py-4 px-4 font-bold text-sm flex justify-between items-center border border-gray-700 transition-colors">
                     <span className="flex items-center gap-2"><i className="fa-solid fa-robot text-green-400"/> Run Optimizer</span>
                     <i className="fa-solid fa-arrow-right text-gray-500"/>
                   </button>
