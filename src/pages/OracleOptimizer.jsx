@@ -924,7 +924,7 @@ export default function OracleOptimizer() {
                 {/* Players In vs Players Out */}
                 {result?.squad?.length > 0 && (() => {
                   const ins  = (result.squad||[]).filter(p => newIds.has(p.player_id))
-                  const outs = (result.transfers||[]).filter(t => t.action==='out' && t.gw===1)
+                  const outs = (result.transfers||[]).filter(t => t.action==='out')
                   if (!ins.length && !outs.length) return null
                   return (
                     <div className="mt-3 grid grid-cols-2 gap-3">

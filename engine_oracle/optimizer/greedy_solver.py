@@ -71,6 +71,22 @@ def solve_greedy(
         result = _solve_best_squad(df, budget, horizon)
         result["force_chip"] = force_chip
         result["chip_plan"]  = {0: force_chip}
+        # Build transfers list: all current squad = OUT, all new squad = IN
+        new_ids = {p["player_id"] for p in result["squad"]}
+        cur_pids = set(current_squad_ids or [])
+        pid_map2 = {int(r["player_id"]): r.to_dict() for _, r in df.iterrows()}
+        outs = [
+            {"action":"out","player_id":int(pid),"name":pid_map2.get(pid,{}).get("name","—"),
+             "price":float(pid_map2.get(pid,{}).get("price",0)),"gw":1}
+            for pid in cur_pids if pid not in new_ids
+        ]
+        ins  = [
+            {"action":"in","player_id":int(p["player_id"]),"name":p.get("name",""),
+             "price":float(p.get("price",0)),"xp_gw1":float(p.get("xp_gw1",0)),
+             "position":p.get("position",""),"team_short":p.get("team_short",""),"gw":1}
+            for p in result["squad"] if p["player_id"] not in cur_pids
+        ]
+        result["transfers"] = outs + ins
         return result
 
     pid_map = {int(r["player_id"]): r.to_dict() for _, r in df.iterrows()}
