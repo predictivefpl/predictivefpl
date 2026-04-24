@@ -71,12 +71,17 @@ def predict_oracle_xp(
     else:
         fdr_mult = np.ones(len(features_df))
 
-    # Availability probability (rotation_risk already in features)
-    avail_prob = np.ones(len(features_df))
-    if "start_probability" in features_df.columns:
-        avail_prob = features_df["start_probability"].clip(0.3, 1.0).values
+    # Availability: use pipeline-derived value (0=injured, 0.5=doubtful, 1=fit)
+    if "availability" in players_df.columns:
+        pid_to_avail = players_df.set_index("player_id")["availability"].to_dict()
+        avail_prob   = np.array([pid_to_avail.get(int(pid), 1.0)
+                                 for pid in features_df["player_id"].values], dtype=float)
+    else:
+        avail_prob = np.ones(len(features_df))
+    # Further dampen by rotation risk if available
     if "rotation_risk" in features_df.columns:
-        avail_prob *= (1 - features_df["rotation_risk"].values * 0.4)
+        avail_prob = avail_prob * (1 - features_df["rotation_risk"].fillna(0).values * 0.25)
+    avail_prob = avail_prob.clip(0.0, 1.0)
 
     # Build fixture count matrix: shape (n_players, horizon)
     from data.pipeline import get_fixture_count

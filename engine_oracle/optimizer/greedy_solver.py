@@ -99,7 +99,10 @@ def solve_greedy(
     # Greedy: each iteration find the single best (out, in) swap
     transfers_out = []
     transfers_in  = []
-    bank = budget - sum(p.get("price", 0) for p in squad)
+    found_price   = sum(p.get("price", 0) for p in squad)
+    missing_count = max(0, len(current_squad_ids) - len(squad))
+    avg_price     = (found_price / len(squad)) if squad else 6.0
+    bank          = max(0.0, budget - found_price - (missing_count * avg_price))
 
     for _ in range(num_transfers):
         best_gain = -999
@@ -219,11 +222,21 @@ def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int = 5) -> dict
         captain["is_captain"] = True
         total_xp += captain.get("xp_gw1", 0)
 
+    starters_b = [p for p in squad if p.get("is_starter")]
+    cap_b      = next((p for p in starters_b if p.get("is_captain")), None)
+    xp_by_gw_b = []
+    for t in range(horizon):
+        col  = f"xp_gw{t+1}"
+        gw_t = sum(float(p.get(col, 0) or 0) for p in starters_b)
+        if cap_b:
+            gw_t += float(cap_b.get(col, 0) or 0)
+        xp_by_gw_b.append(round(gw_t, 2))
+    total_b = round(sum(xp_by_gw_b), 2)
     return {
         "status": "Optimal", "squad": squad, "transfers": [],
-        "chip_plan": {0: None}, "xp_by_gw": [round(total_xp, 2)],
-        "total_xp": round(total_xp, 2), "total_hits": 0,
-        "net_xp": round(total_xp, 2), "option_value": 0,
+        "chip_plan": {0: None}, "xp_by_gw": xp_by_gw_b,
+        "total_xp": total_b, "total_hits": 0,
+        "net_xp": total_b, "option_value": 0,
         "transfer_plan": [], "transfers_applied": 0,
     }
 
@@ -235,7 +248,10 @@ def _start_score(player: dict, horizon: int) -> float:
     DGW players get a significant bonus.
     """
     xp_gw1 = float(player.get("xp_gw1", 0) or 0)
-    dgw    = int(player.get("fixture_count_gw1", 1) or 1)
+    fc_gw1 = int(player.get("fixture_count_gw1", 1) or 1)
+    dgw    = fc_gw1
+    if fc_gw1 == 0:
+        xp_gw1 = 0.0  # BGW — no fixture this GW, never starts over playing players
     # GW1 counts 50%, remaining horizon counts 50%
     future_xp = sum(float(player.get(f"xp_gw{t+1}", 0) or 0) for t in range(1, min(horizon, 5)))
     dgw_bonus  = xp_gw1 * 0.5 if dgw >= 2 else 0  # extra bonus for DGW

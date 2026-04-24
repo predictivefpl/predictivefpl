@@ -69,7 +69,14 @@ def build_oracle_features(
 
     # Fixture features for current GW
     pid_to_team = players_df.set_index("player_id")["team_id"].to_dict()
-    current = df[df["gw"] == current_gw - 1].copy()
+    # Use last recorded GW per player (not just current_gw-1 — player may have blanked)
+    last_gw_per_player = df.groupby("player_id")["gw"].max()
+    df = df.join(last_gw_per_player.rename("_last_gw"), on="player_id")
+    current = df[df["gw"] == df["_last_gw"]].drop_duplicates("player_id").copy()
+    # Ensure ALL players appear (some may have no history at all)
+    all_pids = players_df[["player_id"]].copy()
+    current = all_pids.merge(current.drop(columns=["_last_gw"], errors="ignore"),
+                             on="player_id", how="left")
     current["team_id"] = current["player_id"].map(pid_to_team)
 
     for offset, label in [(0, "gw1"), (1, "gw2"), (2, "gw3")]:
@@ -116,6 +123,11 @@ def build_oracle_features(
     else:
         current["start_probability"] = 0.8
         current["rotation_risk"] = 0.2
+    # Override with real pipeline availability (injured=0, doubtful=0.5, fit=1)
+    if "availability" in players_df.columns:
+        avail_map = players_df.set_index("player_id")["availability"].to_dict()
+        current["start_probability"] = current["player_id"].map(avail_map).fillna(0.8).clip(0, 1)
+        current["rotation_risk"]     = 1 - current["start_probability"]
 
     # Merge player metadata
     meta = players_df[["player_id", "price", "ppg", "ownership_pct"]].copy()
@@ -147,8 +159,24 @@ def _build_from_players_only(players_df, fixtures_df, elo, current_gw):
     df["bonus_roll5"] = 1.0
     df["xgi_roll3"]  = df["xgi_90"] * 0.75
     df["xgi_roll5"]  = df["xgi_90"] * 0.75
-    df["start_probability"] = 0.8
-    df["rotation_risk"]     = 0.2
+    # Use real availability from pipeline (0=injured, 0.5=doubtful, 1=fit)
+    if "availability" in df.columns:
+        df["start_probability"] = df["availability"].clip(0, 1)
+        df["rotation_risk"]     = (1 - df["availability"]).clip(0, 1)
+    else:
+        df["start_probability"] = 0.8
+        df["rotation_risk"]     = 0.2
+    # Form multiplier: hot/cold players boosted/reduced vs ppg average
+    if "form" in df.columns:
+        mean_form = df["form"].mean()
+        form_mult = (df["form"] / (mean_form + 0.1)).clip(0.5, 2.0)
+        df["pts_roll3"] = (df["ppg"] * form_mult).clip(lower=0)
+        df["pts_roll5"] = (df["ppg"] * form_mult.clip(0.7, 1.5)).clip(lower=0)
+    # Zero all rolling stats for unavailable players
+    if "availability" in df.columns:
+        mask = df["availability"] <= 0
+        for col in ["pts_roll3", "pts_roll5", "pts_roll8", "xgi_roll3", "xgi_roll5"]:
+            df.loc[mask, col] = 0.0
 
     for offset, label in [(0, "gw1"), (1, "gw2"), (2, "gw3")]:
         gw_t = current_gw + offset
