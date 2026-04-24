@@ -115,7 +115,23 @@ async def fetch_all_oracle_data() -> dict:
         "ppg":          elements["points_per_game"].astype(float),
         "form":         elements["form"].astype(float),
         "xgi_90":       pd.to_numeric(elements.get("expected_goal_involvements_per_90", 0), errors="coerce").fillna(0),
+        # ── Injury / availability ──────────────────────────────────────────
+        "chance_of_playing": pd.to_numeric(elements.get("chance_of_playing_next_round", None), errors="coerce"),
+        "news":          elements.get("news", "").fillna(""),
     })
+    # Derive availability probability (0.0 – 1.0) from FPL status + chance fields
+    def _avail(row):
+        s = str(row.get("status", "a")).lower()
+        cop = row.get("chance_of_playing")
+        if s == "i":   return 0.0          # injured — do not select
+        if s == "s":   return 0.0          # suspended
+        if s == "u":   return 0.0          # unavailable
+        if s == "d":                        # doubtful — use chance_of_playing if known
+            if cop is not None and not pd.isna(cop):
+                return float(cop) / 100.0
+            return 0.5                      # unknown doubtful → 50%
+        return 1.0                          # status "a" = fully available
+    players_df["availability"] = players_df.apply(_avail, axis=1)
     players_df = players_df.merge(
         teams_df[["team_id", "team_short"]], on="team_id", how="left"
     )

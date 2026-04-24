@@ -10,13 +10,15 @@ HIT_COST    = 4
 
 
 def _score(player: dict, horizon: int = 3) -> float:
-    """Composite score: weighted sum of xP over horizon with DGW bonus."""
+    """Composite score: weighted sum of xP over horizon * availability."""
+    avail = float(player.get("availability", 1.0) or 1.0)
+    if avail == 0.0:
+        return 0.0  # injured/suspended — never score positively
     xp = sum(
         player.get(f"xp_gw{t+1}", 0) or 0
         for t in range(min(horizon, 8))
     )
-    avail = float(player.get("availability", 1.0) or 1.0)
-    return round(xp * avail, 4)
+    return round(xp * avail, 4)ound(xp * avail, 4)
 
 
 def _club_counts(squad: list[dict]) -> dict:
@@ -112,7 +114,8 @@ def solve_greedy(
             # Find best replacement for this position
             candidates = df[
                 (df["position"] == pos) &
-                (~df["player_id"].isin(squad_ids))
+                (~df["player_id"].isin(squad_ids)) &
+                (df["availability"].fillna(1.0) > 0.0)  # exclude injured/suspended
             ].sort_values("_score", ascending=False).head(30)
 
             for _, row in candidates.iterrows():
@@ -179,7 +182,7 @@ def solve_greedy(
 
 def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int = 5) -> dict:
     """Pick the best 15 players within budget respecting position/club rules."""
-    df = df.sort_values("_score", ascending=False).copy()
+    df = df[df["availability"].fillna(1.0) > 0.0].sort_values("_score", ascending=False).copy()
     squad = []
     pos_counts = {p: 0 for p in POS_QUOTA}
     club_counts: dict[str, int] = {}
