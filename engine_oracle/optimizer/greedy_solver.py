@@ -225,33 +225,76 @@ def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int = 5) -> dict
     }
 
 
+def _start_score(player: dict, horizon: int) -> float:
+    """
+    Score for starting XI selection.
+    Heavily weights GW1 xP so players with immediate fixtures start.
+    DGW players get a significant bonus.
+    """
+    xp_gw1 = float(player.get("xp_gw1", 0) or 0)
+    dgw    = int(player.get("fixture_count_gw1", 1) or 1)
+    # GW1 counts 50%, remaining horizon counts 50%
+    future_xp = sum(float(player.get(f"xp_gw{t+1}", 0) or 0) for t in range(1, min(horizon, 5)))
+    dgw_bonus  = xp_gw1 * 0.5 if dgw >= 2 else 0  # extra bonus for DGW
+    avail = float(player.get("availability", 1.0) or 1.0)
+    return (xp_gw1 * 1.5 + future_xp + dgw_bonus) * avail
+
+
 def _assign_xi(squad: list[dict], horizon: int) -> list[dict]:
+    """
+    Pick optimal starting XI considering:
+    - GW1 xP weighted heavily (immediate fixtures matter most)
+    - DGW players prioritised
+    - Valid formation (min 1 GKP, 3 DEF, 2 MID, 1 FWD, max 1 GKP)
+    - Captain = highest xp_gw1 starter (doubled score)
+    """
     MIN_START = {"GKP": 1, "DEF": 3, "MID": 2, "FWD": 1}
+    MAX_START = {"GKP": 1, "DEF": 5, "MID": 5, "FWD": 3}
+
     for p in squad:
         p["is_starter"] = False
         p["is_captain"] = False
         p["is_vice"]    = False
 
-    # Ensure minimum formation
+    # Step 1: fill minimums using start_score
     started = 0
     for pos, min_c in MIN_START.items():
         pos_players = sorted(
             [p for p in squad if p.get("position") == pos],
-            key=lambda p: -_score(p, horizon)
+            key=lambda p: -_start_score(p, horizon)
         )
         for p in pos_players[:min_c]:
             p["is_starter"] = True
             started += 1
 
-    # Fill remaining XI spots
+    # Step 2: fill remaining 4 spots with best available non-GKP players
+    # Respect position maximums
     remaining = sorted(
         [p for p in squad if not p["is_starter"] and p.get("position") != "GKP"],
-        key=lambda p: -_score(p, horizon)
+        key=lambda p: -_start_score(p, horizon)
     )
+    pos_counts = {pos: sum(1 for p in squad if p.get("is_starter") and p.get("position") == pos)
+                  for pos in MAX_START}
+
     for p in remaining:
         if started >= XI_SIZE:
             break
+        pos = p.get("position")
+        if pos_counts.get(pos, 0) >= MAX_START.get(pos, 3):
+            continue  # already at max for this position
         p["is_starter"] = True
+        pos_counts[pos] = pos_counts.get(pos, 0) + 1
         started += 1
+
+    # Step 3: captain = starter with highest GW1 xP
+    starters = [p for p in squad if p.get("is_starter")]
+    if starters:
+        cap = max(starters, key=lambda p: float(p.get("xp_gw1", 0) or 0))
+        cap["is_captain"] = True
+        # Vice = second highest GW1 xP
+        others = [p for p in starters if p is not cap]
+        if others:
+            vice = max(others, key=lambda p: float(p.get("xp_gw1", 0) or 0))
+            vice["is_vice"] = True
 
     return squad
