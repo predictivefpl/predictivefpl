@@ -206,35 +206,51 @@ async def _run_pipeline():
 
         print(f"GW:{current_gw}  Players:{len(players_df)}")
 
-        # Fetch player history for top players (used for ML training)
-        print("Fetching player history for training...")
+        # Fetch ALL player histories concurrently in batches of 40
+        print(f"Fetching history for ALL {len(players_df)} players concurrently...")
+        all_pids = players_df["player_id"].tolist()
         history_rows = []
-        top_pids = players_df.nlargest(100, "ppg")["player_id"].tolist()
+        BATCH = 40
+
+        async def _fetch_one(sess, pid):
+            try:
+                url = f"https://fantasy.premierleague.com/api/element-summary/{pid}/"
+                async with sess.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+                    if r.status == 200:
+                        d = await r.json()
+                        return [{
+                            "player_id": pid, "gw": row.get("round"),
+                            "total_points": row.get("total_points", 0),
+                            "minutes": row.get("minutes", 0),
+                            "goals_scored": row.get("goals_scored", 0),
+                            "assists": row.get("assists", 0),
+                            "clean_sheets": row.get("clean_sheets", 0),
+                            "bonus": row.get("bonus", 0),
+                            "bps": row.get("bps", 0),
+                            "expected_goal_involvements": float(row.get("expected_goal_involvements", 0) or 0),
+                            "expected_goals": float(row.get("expected_goals", 0) or 0),
+                            "expected_assists": float(row.get("expected_assists", 0) or 0),
+                            "expected_goals_conceded": float(row.get("expected_goals_conceded", 0) or 0),
+                            "influence": float(row.get("influence", 0) or 0),
+                            "creativity": float(row.get("creativity", 0) or 0),
+                            "threat": float(row.get("threat", 0) or 0),
+                            "ict_index": float(row.get("ict_index", 0) or 0),
+                            "was_home": int(row.get("was_home", 0)),
+                            "opponent_team": row.get("opponent_team", 0),
+                        } for row in d.get("history", [])]
+            except Exception:
+                return []
+
         async with aiohttp.ClientSession() as sess:
-            for pid in top_pids:
-                try:
-                    url = f"https://fantasy.premierleague.com/api/element-summary/{pid}/"
-                    async with sess.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
-                        if r.status == 200:
-                            d = await r.json()
-                            for gw_row in d.get("history", []):
-                                history_rows.append({
-                                    "player_id": pid,
-                                    "gw": gw_row.get("round"),
-                                    "total_points": gw_row.get("total_points", 0),
-                                    "minutes": gw_row.get("minutes", 0),
-                                    "goals_scored": gw_row.get("goals_scored", 0),
-                                    "assists": gw_row.get("assists", 0),
-                                    "clean_sheets": gw_row.get("clean_sheets", 0),
-                                    "bonus": gw_row.get("bonus", 0),
-                                    "bps": gw_row.get("bps", 0),
-                                    "expected_goal_involvements": float(gw_row.get("expected_goal_involvements", 0) or 0),
-                                    "was_home": int(gw_row.get("was_home", 0)),
-                                })
-                except Exception:
-                    pass
+            for i in range(0, len(all_pids), BATCH):
+                batch = all_pids[i:i+BATCH]
+                batch_results = await asyncio.gather(*[_fetch_one(sess, pid) for pid in batch])
+                for rows in batch_results:
+                    history_rows.extend(rows)
+                print(f"  Progress: {min(i+BATCH, len(all_pids))}/{len(all_pids)} players")
+
         history_df = pd.DataFrame(history_rows) if history_rows else pd.DataFrame()
-        print(f"  Fetched {len(history_df)} history rows for {len(top_pids)} players")
+        print(f"  Total: {len(history_df)} history rows for {len(all_pids)} players")
 
         # Build features for top players + train
         features_df = build_oracle_features(history_df, players_df, fixtures_df, elo, current_gw)

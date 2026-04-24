@@ -115,6 +115,13 @@ async def fetch_all_oracle_data() -> dict:
         "ppg":          elements["points_per_game"].astype(float),
         "form":         elements["form"].astype(float),
         "xgi_90":       pd.to_numeric(elements.get("expected_goal_involvements_per_90", 0), errors="coerce").fillna(0),
+        "xg_90":        pd.to_numeric(elements.get("expected_goals_per_90", 0), errors="coerce").fillna(0),
+        "xa_90":        pd.to_numeric(elements.get("expected_assists_per_90", 0), errors="coerce").fillna(0),
+        "xgc_90":       pd.to_numeric(elements.get("expected_goals_conceded_per_90", 0), errors="coerce").fillna(0),
+        "ict_index":    pd.to_numeric(elements.get("ict_index", 0), errors="coerce").fillna(0),
+        "starts":       pd.to_numeric(elements.get("starts", 0), errors="coerce").fillna(0),
+        "net_transfers":(pd.to_numeric(elements.get("transfers_in_event", 0), errors="coerce").fillna(0) -
+                         pd.to_numeric(elements.get("transfers_out_event", 0), errors="coerce").fillna(0)),
         # ── Injury / availability ──────────────────────────────────────────
         "chance_of_playing": pd.to_numeric(elements.get("chance_of_playing_next_round", None), errors="coerce"),
         "news":          elements.get("news", "").fillna(""),

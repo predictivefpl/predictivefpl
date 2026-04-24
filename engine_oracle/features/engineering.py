@@ -10,7 +10,6 @@ import numpy as np
 from data.pipeline import get_fixture_count
 
 FEATURE_COLS = [
-    # Form
     "pts_roll3", "pts_roll5", "pts_roll8",
     "mins_roll3", "mins_roll5",
     "goals_roll3", "goals_roll5",
@@ -18,14 +17,17 @@ FEATURE_COLS = [
     "cs_roll3", "cs_roll5",
     "bonus_roll3", "bonus_roll5",
     "xgi_roll3", "xgi_roll5",
-    # Fixture
+    "xg_roll3", "xg_roll5",
+    "xa_roll3", "xa_roll5",
+    "ict_roll3", "ict_roll5",
+    "influence_roll3", "creativity_roll3", "threat_roll3",
     "fdr_dynamic", "is_home",
     "fixture_count_gw1", "fixture_count_gw2", "fixture_count_gw3",
-    # Risk
-    "rotation_risk", "start_probability",
-    # Price
-    "price", "ppg", "ownership_pct",
-    # Position dummies
+    "team_goals_scored_roll5", "team_goals_conceded_roll5",
+    "opponent_goals_conceded_roll5",
+    "rotation_risk", "start_probability", "starts_pct",
+    "price", "ppg", "ownership_pct", "net_transfers",
+    "xg_90", "xa_90", "xgc_90", "ict_index",
     "pos_GKP", "pos_DEF", "pos_MID", "pos_FWD",
 ]
 
@@ -66,6 +68,20 @@ def build_oracle_features(
             continue
         for w in [3, 5, 8]:
             df[f"{alias}_roll{w}"] = add_rolling(df, col, w)
+
+    # xG / xA / ICT rolling stats from history
+    for col, alias in [
+        ("expected_goals", "xg"), ("expected_assists", "xa"),
+        ("ict_index", "ict"), ("influence", "influence"),
+        ("creativity", "creativity"), ("threat", "threat"),
+    ]:
+        if col in df.columns:
+            for w in [3, 5]:
+                df[f"{alias}_roll{w}"] = add_rolling(df, col, w)
+    if "minutes" in df.columns:
+        df["started"]    = (df["minutes"] >= 45).astype(int)
+        df["starts_pct"] = df.groupby("player_id")["started"].transform(
+            lambda x: x.shift(1).rolling(5, min_periods=1).mean())
 
     # Fixture features for current GW
     pid_to_team = players_df.set_index("player_id")["team_id"].to_dict()
@@ -110,6 +126,30 @@ def build_oracle_features(
                 ) if pd.notna(t) else 0
             )
 
+    # Team form
+    pid_to_tid = players_df.set_index("player_id")["team_id"].to_dict()
+    df["_tid"] = df["player_id"].map(pid_to_tid)
+    if "goals_scored" in df.columns:
+        tg = df.groupby(["_tid","gw"])["goals_scored"].sum().reset_index()
+        tg["team_goals_scored_roll5"] = tg.groupby("_tid")["goals_scored"].transform(
+            lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+        df = df.merge(tg[["_tid","gw","team_goals_scored_roll5"]], on=["_tid","gw"], how="left")
+    else:
+        df["team_goals_scored_roll5"] = 1.5
+    if "clean_sheets" in df.columns:
+        tc = df.groupby(["_tid","gw"])["clean_sheets"].max().reset_index()
+        tc["_gc"] = 1 - tc["clean_sheets"]
+        tc["team_goals_conceded_roll5"] = tc.groupby("_tid")["_gc"].transform(
+            lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+        df = df.merge(tc[["_tid","gw","team_goals_conceded_roll5"]], on=["_tid","gw"], how="left")
+    else:
+        df["team_goals_conceded_roll5"] = 1.2
+    if "opponent_team" in df.columns:
+        gc_map = df.groupby("_tid")["team_goals_conceded_roll5"].last().to_dict()
+        df["opponent_goals_conceded_roll5"] = df["opponent_team"].map(gc_map).fillna(1.2)
+    else:
+        df["opponent_goals_conceded_roll5"] = 1.2
+    current = df.groupby("player_id").last().reset_index()
     # Position dummies
     pos_map = players_df.set_index("player_id")["position"].to_dict()
     current["position"] = current["player_id"].map(pos_map)
@@ -164,6 +204,34 @@ def _build_from_players_only(players_df, fixtures_df, elo, current_gw):
     df["bonus_roll5"] = 1.0
     df["xgi_roll3"]  = df["xgi_90"] * 0.75
     df["xgi_roll5"]  = df["xgi_90"] * 0.75
+    df["xg_roll3"]   = df["xg_90"]  * 0.75 if "xg_90"  in df.columns else 0.0
+    df["xg_roll5"]   = df["xg_90"]  * 0.75 if "xg_90"  in df.columns else 0.0
+    df["xa_roll3"]   = df["xa_90"]  * 0.75 if "xa_90"  in df.columns else 0.0
+    df["xa_roll5"]   = df["xa_90"]  * 0.75 if "xa_90"  in df.columns else 0.0
+    df["ict_roll3"]  = df["ict_index"] if "ict_index" in df.columns else 0.0
+    df["ict_roll5"]  = df["ict_index"] if "ict_index" in df.columns else 0.0
+    df["influence_roll3"]  = 0.0
+    df["creativity_roll3"] = 0.0
+    df["threat_roll3"]     = 0.0
+    df["starts_pct"]       = (df["starts"] / df["minutes"].clip(lower=90) * 90).clip(0,1) if "starts" in df.columns else 0.8
+    df["net_transfers"]    = df["net_transfers"] if "net_transfers" in df.columns else 0
+    df["team_goals_scored_roll5"]       = 1.5
+    df["team_goals_conceded_roll5"]     = 1.2
+    df["opponent_goals_conceded_roll5"] = 1.2
+    df["xg_roll3"]   = df["xg_90"]  * 0.75 if "xg_90"  in df.columns else 0.0
+    df["xg_roll5"]   = df["xg_90"]  * 0.75 if "xg_90"  in df.columns else 0.0
+    df["xa_roll3"]   = df["xa_90"]  * 0.75 if "xa_90"  in df.columns else 0.0
+    df["xa_roll5"]   = df["xa_90"]  * 0.75 if "xa_90"  in df.columns else 0.0
+    df["ict_roll3"]  = df["ict_index"] if "ict_index" in df.columns else 0.0
+    df["ict_roll5"]  = df["ict_index"] if "ict_index" in df.columns else 0.0
+    df["influence_roll3"]  = 0.0
+    df["creativity_roll3"] = 0.0
+    df["threat_roll3"]     = 0.0
+    df["starts_pct"]       = (df["starts"] / df["minutes"].clip(lower=90) * 90).clip(0,1) if "starts" in df.columns else 0.8
+    df["net_transfers"]    = df["net_transfers"] if "net_transfers" in df.columns else 0
+    df["team_goals_scored_roll5"]       = 1.5
+    df["team_goals_conceded_roll5"]     = 1.2
+    df["opponent_goals_conceded_roll5"] = 1.2
     # Use real availability from pipeline (0=injured, 0.5=doubtful, 1=fit)
     if "availability" in df.columns:
         df["start_probability"] = df["availability"].clip(0, 1)
