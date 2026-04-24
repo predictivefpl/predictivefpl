@@ -166,9 +166,25 @@ async def fetch_all_oracle_data() -> dict:
 
     # ── Current GW ────────────────────────────────────────────────────────────
     events = bootstrap["events"]
-    cur_ev = next((e for e in events if e["is_current"]),
-                  next((e for e in events if e["is_next"]), events[-1]))
-    current_gw = cur_ev["id"]
+    # Pick the correct GW to predict from:
+    # If current GW deadline has passed, transfers take effect next GW
+    from datetime import datetime, timezone
+    cur_ev  = next((e for e in events if e["is_current"]), None)
+    next_ev = next((e for e in events if e["is_next"]), None)
+
+    prediction_gw = None
+    if cur_ev and cur_ev.get("deadline_time"):
+        try:
+            deadline = datetime.fromisoformat(cur_ev["deadline_time"].replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > deadline and next_ev:
+                prediction_gw = next_ev["id"]  # deadline passed — optimise for next GW
+        except Exception:
+            pass
+    if prediction_gw is None:
+        prediction_gw = next_ev["id"] if next_ev else (cur_ev["id"] if cur_ev else events[-1]["id"])
+
+    current_gw = prediction_gw
+    print(f"  Predicting from GW{current_gw} (deadline check applied)")
 
     # ── DGW / BGW maps ────────────────────────────────────────────────────────
     all_team_ids = set(teams_df["team_id"].tolist())
