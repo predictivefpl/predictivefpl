@@ -128,6 +128,11 @@ def build_oracle_features(
         avail_map = players_df.set_index("player_id")["availability"].to_dict()
         current["start_probability"] = current["player_id"].map(avail_map).fillna(0.8).clip(0, 1)
         current["rotation_risk"]     = 1 - current["start_probability"]
+    # Override with real pipeline availability (injured=0, doubtful=0.5, fit=1)
+    if "availability" in players_df.columns:
+        avail_map = players_df.set_index("player_id")["availability"].to_dict()
+        current["start_probability"] = current["player_id"].map(avail_map).fillna(0.8).clip(0, 1)
+        current["rotation_risk"]     = 1 - current["start_probability"]
 
     # Merge player metadata
     meta = players_df[["player_id", "price", "ppg", "ownership_pct"]].copy()
