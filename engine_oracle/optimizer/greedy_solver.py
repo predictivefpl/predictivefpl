@@ -18,7 +18,7 @@ def _score(player: dict, horizon: int = 3) -> float:
         player.get(f"xp_gw{t+1}", 0) or 0
         for t in range(min(horizon, 8))
     )
-    return round(xp * avail, 4)ound(xp * avail, 4)
+    return round(xp * avail, 4)
 
 
 def _club_counts(squad: list[dict]) -> dict:
