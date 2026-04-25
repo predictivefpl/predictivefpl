@@ -115,7 +115,11 @@ def build_oracle_features(
                 row = gw_fix.iloc[0]
                 is_home = row["home_team"] == team_id
                 opp = row["away_team"] if is_home else row["home_team"]
-                return elo.fdr_dynamic(int(team_id), int(opp))
+                if pd.isna(opp): return 3.0
+                try:
+                    return elo.fdr_dynamic(int(team_id), int(opp))
+                except Exception:
+                    return 3.0
             current["fdr_dynamic"] = current["team_id"].apply(_get_fdr)
             current["is_home"] = current["team_id"].apply(
                 lambda t: int(
@@ -258,17 +262,22 @@ def _build_from_players_only(players_df, fixtures_df, elo, current_gw):
         )
 
     def _fdr(team_id):
-        gw_fix = fixtures_df[
-            (fixtures_df["gw"] == current_gw) &
-            ((fixtures_df["home_team"] == team_id) |
-             (fixtures_df["away_team"] == team_id))
-        ]
-        if gw_fix.empty:
+        if pd.isna(team_id): return 3.0
+        try:
+            if pd.isna(team_id): return 3.0
+            gw_fix = fixtures_df[
+                (fixtures_df["gw"] == current_gw) &
+                ((fixtures_df["home_team"] == team_id) |
+                 (fixtures_df["away_team"] == team_id))
+            ]
+            if gw_fix.empty: return 3.0
+            row = gw_fix.iloc[0]
+            is_home = row["home_team"] == team_id
+            opp = row["away_team"] if is_home else row["home_team"]
+            if pd.isna(opp): return 3.0
+            return elo.fdr_dynamic(int(team_id), int(opp))
+        except Exception:
             return 3.0
-        row = gw_fix.iloc[0]
-        is_home = row["home_team"] == team_id
-        opp = int(row["away_team"] if is_home else row["home_team"])
-        return elo.fdr_dynamic(int(team_id), opp)
 
     df["fdr_dynamic"] = df["team_id"].apply(_fdr)
     df["is_home"] = df["team_id"].apply(
@@ -283,3 +292,4 @@ def _build_from_players_only(players_df, fixtures_df, elo, current_gw):
 
     avail_cols = [c for c in FEATURE_COLS if c in df.columns]
     return df[["player_id"] + avail_cols].fillna(0)
+
