@@ -1,45 +1,128 @@
 
-/* ═══════════════════════════════════════════
-   MOBILE RESPONSIVE — PredictiveFPL
-   Applies to screens < 768px
-═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   PredictiveFPL — Mobile Responsive Styles
+   Targets screens under 768px
+═══════════════════════════════════════════════════ */
+
 @media (max-width: 767px) {
 
-  /* Hide desktop sidebar on mobile */
-  .desktop-sidebar { display: none !important; }
-
-  /* Page content fills full width on mobile */
-  .min-h-screen.bg-\[\#0F121D\].bg-grid.flex {
-    flex-direction: column;
-  }
-
-  /* Bottom nav padding so content isn't hidden */
+  /* ── Global: content clears bottom nav ──────── */
   .flex-1.flex.flex-col.overflow-hidden {
     padding-bottom: 68px;
   }
 
-  /* Stat/KPI rows: 2 columns on mobile */
+  /* ── Reduce page padding ─────────────────────── */
+  .p-8 { padding: 0.875rem !important; }
+  .p-6 { padding: 0.75rem !important; }
+  .px-8 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+  .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+
+  /* ── Grid layouts collapse to 2 cols ─────────── */
   .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .grid.grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid.grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
 
-  /* Full-width cards */
-  .grid.grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+  /* ── Oracle: config panel collapses to bar ───── */
+  .oracle-config-panel {
+    width: 100% !important;
+    max-height: 52px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .oracle-config-panel.open {
+    max-height: 600px;
+  }
 
-  /* Reduce padding on mobile */
-  .p-8 { padding: 1rem !important; }
-  .p-6 { padding: 0.875rem !important; }
-  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  /* ── Pitch: scale to fit screen ──────────────── */
+  .pitch-outer {
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+  .pitch-inner {
+    width: 100% !important;
+    min-height: 360px !important;
+  }
 
-  /* Oracle config panel full width */
-  .oracle-config { width: 100% !important; }
+  /* Player token scaling on pitch */
+  .player-token-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .player-token-name {
+    font-size: 8px !important;
+    max-width: 44px !important;
+  }
+  .player-token-xp {
+    font-size: 8px !important;
+  }
 
-  /* Pitch scales down */
-  .pitch-container { transform: scale(0.85); transform-origin: top center; }
+  /* Bench row smaller */
+  .bench-row .player-token-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
 
-  /* Transfer rows stack */
-  .transfer-pair { flex-direction: column !important; gap: 4px !important; }
+  /* ── Transfer popup: full screen on mobile ───── */
+  .oracle-popup-backdrop {
+    align-items: flex-end !important;
+  }
+  .oracle-popup-modal {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90dvh !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
 
-  /* Text size reductions */
-  .text-4xl { font-size: 1.75rem !important; }
-  .text-3xl { font-size: 1.5rem !important; }
+  /* Transfer IN/OUT rows: stack vertically */
+  .transfer-pair-row {
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  .transfer-arrow {
+    transform: rotate(90deg);
+    align-self: center;
+  }
+
+  /* ── xP chart: allow scrolling ───────────────── */
+  .xp-chart-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .xp-chart-bar {
+    min-width: 48px !important;
+  }
+
+  /* ── Header: compact ─────────────────────────── */
+  .page-header h1 {
+    font-size: 1.25rem !important;
+  }
+
+  /* ── Squad pitch position rows ───────────────── */
+  .pitch-pos-row {
+    gap: 4px !important;
+  }
+
+  /* ── Fixture horizon rows ────────────────────── */
+  .fixture-row {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+
+  /* ── KPI cards: compact ──────────────────────── */
+  .kpi-value {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Bottom safe area for iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 767px) {
+    .mobile-bottom-nav {
+      padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+      height: calc(64px + env(safe-area-inset-bottom)) !important;
+    }
+    .flex-1.flex.flex-col.overflow-hidden {
+      padding-bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+    }
+  }
 }

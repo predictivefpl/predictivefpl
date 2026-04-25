@@ -566,9 +566,9 @@ export default function OracleOptimizer() {
     const isWC  = forceChip === 'wildcard'
     const isFH  = forceChip === 'freehit'
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)'}}
+      <div className="oracle-popup-backdrop fixed inset-0 z-50 flex items-center md:items-center justify-center" style={{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)'}}
         onClick={e => { if (e.target === e.currentTarget) setShowPopup(false) }}>
-        <div className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden" style={{background:'#0F121D',border:'1px solid rgba(168,85,247,0.3)',boxShadow:'0 0 60px rgba(168,85,247,0.2)'}}>
+        <div className="oracle-popup-modal relative w-full max-w-md mx-0 md:mx-4 rounded-t-3xl md:rounded-2xl overflow-hidden" style={{background:'#0F121D',border:'1px solid rgba(168,85,247,0.3)',boxShadow:'0 0 60px rgba(168,85,247,0.2)',maxHeight:'90dvh',overflowY:'auto'}} style={{background:'#0F121D',border:'1px solid rgba(168,85,247,0.3)',boxShadow:'0 0 60px rgba(168,85,247,0.2)'}}>
           {/* Header */}
           <div className="p-5 text-center" style={{background:'linear-gradient(135deg,rgba(168,85,247,0.15),rgba(59,130,246,0.1))'}}>
             <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
