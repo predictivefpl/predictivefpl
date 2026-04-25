@@ -672,7 +672,7 @@ export default function OracleOptimizer() {
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
       {renderPopup()}
       <Sidebar/>
-      {!tierLoading && !isPro && <ProPaywall />}
+      {!isPro && <ProPaywall />}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
