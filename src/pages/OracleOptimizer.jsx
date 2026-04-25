@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
+import { useUserTier } from '../hooks/useUserTier'
+import ProPaywall from '../components/ProPaywall'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 
@@ -670,6 +672,7 @@ export default function OracleOptimizer() {
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
       {renderPopup()}
       <Sidebar/>
+      {!tierLoading && !isPro && <ProPaywall />}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
