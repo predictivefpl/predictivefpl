@@ -11,6 +11,7 @@ import OptimizerSettings from './pages/OptimizerSettings'
 import Rivals from './pages/Rivals'
 import OracleOptimizer from './pages/OracleOptimizer'
 import UpgradePage from './pages/UpgradePage'
+import AccountSettings from './pages/AccountSettings'
 import Settings from './pages/Settings'
 
 function ProtectedRoute({ children }) {
@@ -34,7 +35,8 @@ export default function App() {
         <Route path="/optimizer" element={<Navigate to="/oracle" replace />} />
         <Route path="/rivals" element={<ProtectedRoute><Rivals /></ProtectedRoute>} />
         <Route path="/oracle" element={<ProtectedRoute><OracleOptimizer /></ProtectedRoute>} />
-          <Route path="/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} /><Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

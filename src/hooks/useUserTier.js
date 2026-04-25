@@ -33,3 +33,40 @@ export function useUserTier() {
 
   return { tier, isPro, isFree, loading }
 }
+
+// Standalone function to redeem a promo code
+export async function redeemPromoCode(email, code) {
+  const upper = code.trim().toUpperCase()
+  // 1. Check code exists and is not redeemed
+  const r1 = await fetch(
+    `${SUPABASE_URL}/rest/v1/promo_codes?code=eq.${upper}&redeemed=eq.false&select=id`,
+    { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+  )
+  const codes = await r1.json()
+  if (!Array.isArray(codes) || codes.length === 0) {
+    return { success: false, error: 'Invalid or already used code.' }
+  }
+  const codeId = codes[0].id
+
+  // 2. Mark code as redeemed
+  await fetch(`${SUPABASE_URL}/rest/v1/promo_codes?id=eq.${codeId}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=minimal'
+    },
+    body: JSON.stringify({ redeemed: true, redeemed_by: email, redeemed_at: new Date().toISOString() })
+  })
+
+  // 3. Upgrade user tier to pro
+  await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=minimal'
+    },
+    body: JSON.stringify({ tier: 'pro' })
+  })
+
+  return { success: true }
+}

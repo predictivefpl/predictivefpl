@@ -92,7 +92,10 @@ export default function AdminConsole() {
     return () => clearInterval(iv)
   }, [isAdmin])
 
-  useEffect(() => { if (tab === 'users' && users === null) fetchUsers() }, [tab])
+  useEffect(() => {
+    if (tab === 'users'  && users  === null) fetchUsers()
+    if (tab === 'promos' && promos.length === 0) fetchPromos()
+  }, [tab])
 
   // ── derived ─────────────────────────────────────────────────────────────────
   const curEvent    = bootstrap?.events?.find(e => e.is_current)
@@ -122,6 +125,86 @@ export default function AdminConsole() {
   })
 
   // ── retrain ─────────────────────────────────────────────────────────────────
+  const fetchPromos = async () => {
+    setPromoLoading(true)
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/promo_codes?select=*&order=created_at.desc`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      )
+      const d = await r.json()
+      setPromos(Array.isArray(d) ? d : [])
+    } catch { setPromos([]) }
+    setPromoLoading(false)
+  }
+
+  const createPromo = async () => {
+    if (!newCode.trim()) return
+    setPromoMsg('')
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/promo_codes`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json', Prefer: 'return=representation'
+        },
+        body: JSON.stringify({
+          code: newCode.trim().toUpperCase(),
+          note: newNote.trim() || 'Beta tester',
+          redeemed: false,
+          created_at: new Date().toISOString()
+        })
+      })
+      if (r.ok) {
+        setPromoMsg('✓ Code created')
+        setNewCode(''); setNewNote('')
+        fetchPromos()
+      } else {
+        const e = await r.json()
+        setPromoMsg('Error: ' + (e.message || e.code || 'Failed'))
+      }
+    } catch (e) { setPromoMsg('Error: ' + e.message) }
+    setTimeout(() => setPromoMsg(''), 3000)
+  }
+
+  const deletePromo = async (id) => {
+    await fetch(`${SUPABASE_URL}/rest/v1/promo_codes?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    })
+    fetchPromos()
+  }
+
+  const grantPro = async (userId, userEmail) => {
+    if (!confirm(`Grant Pro access to ${userEmail}?`)) return
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json', Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ tier: 'pro' })
+      })
+      fetchUsers()
+    } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  const revokePro = async (userId, userEmail) => {
+    if (!confirm(`Revoke Pro from ${userEmail}?`)) return
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json', Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ tier: 'free' })
+      })
+      fetchUsers()
+    } catch (e) { alert('Error: ' + e.message) }
+  }
+
   const retrain = async (which) => {
     setB('rt_' + which, true)
     try {
@@ -358,7 +441,7 @@ export default function AdminConsole() {
                         <table className="w-full text-sm">
                           <thead className="border-b border-white/[0.06]">
                             <tr className="text-[11px] text-gray-500 uppercase tracking-widest">
-                              {['User','Email','FPL Team ID','Tier','Joined','Last Login'].map(h => (
+                              {['User','Email','FPL Team ID','Tier','Joined','Last Login','Access'].map(h => (
                                 <th key={h} className="px-5 py-4 text-left font-semibold">{h}</th>
                               ))}
                             </tr>
