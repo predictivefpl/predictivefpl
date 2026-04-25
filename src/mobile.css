@@ -1,0 +1,45 @@
+
+/* ═══════════════════════════════════════════
+   MOBILE RESPONSIVE — PredictiveFPL
+   Applies to screens < 768px
+═══════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* Hide desktop sidebar on mobile */
+  .desktop-sidebar { display: none !important; }
+
+  /* Page content fills full width on mobile */
+  .min-h-screen.bg-\[\#0F121D\].bg-grid.flex {
+    flex-direction: column;
+  }
+
+  /* Bottom nav padding so content isn't hidden */
+  .flex-1.flex.flex-col.overflow-hidden {
+    padding-bottom: 68px;
+  }
+
+  /* Stat/KPI rows: 2 columns on mobile */
+  .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid.grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* Full-width cards */
+  .grid.grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+
+  /* Reduce padding on mobile */
+  .p-8 { padding: 1rem !important; }
+  .p-6 { padding: 0.875rem !important; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+
+  /* Oracle config panel full width */
+  .oracle-config { width: 100% !important; }
+
+  /* Pitch scales down */
+  .pitch-container { transform: scale(0.85); transform-origin: top center; }
+
+  /* Transfer rows stack */
+  .transfer-pair { flex-direction: column !important; gap: 4px !important; }
+
+  /* Text size reductions */
+  .text-4xl { font-size: 1.75rem !important; }
+  .text-3xl { font-size: 1.5rem !important; }
+}
