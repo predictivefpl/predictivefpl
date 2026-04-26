@@ -11,7 +11,8 @@ Endpoints:
 import asyncio, os, sys, json
 from pathlib import Path
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI
+from api.stripe_handler import create_checkout_session, stripe_webhook, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -102,6 +103,14 @@ class OptimiseReq(BaseModel):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
+
+@app.post("/stripe/checkout")
+async def checkout(request: Request):
+    return await create_checkout_session(request)
+
+@app.post("/stripe/webhook")
+async def webhook(request: Request):
+    return await stripe_webhook(request)
 
 @app.get("/oracle/status")
 async def status():

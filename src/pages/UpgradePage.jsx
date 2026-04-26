@@ -1,23 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
 
-// Replace with your live Stripe Payment Link for $4.99 AUD/mo
-// Create at: https://dashboard.stripe.com/payment-links
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_PAYMENT_LINK'
 
 export default function UpgradePage() {
   const navigate    = useNavigate()
   const { user }    = useUser()
-  const [loading, setLoading] = useState(false)
+  const [loading,    setLoading]    = useState(false)
+  const [searchParams] = useSearchParams()
+  const success   = searchParams.get('success') === '1'
+  const cancelled = searchParams.get('cancelled') === '1'
 
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     setLoading(true)
-    // Append user email so Stripe pre-fills it
-    const email = user?.primaryEmailAddress?.emailAddress || ''
-    const url   = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(email)}`
-    window.location.href = url
+    try {
+      const email = user?.primaryEmailAddress?.emailAddress || ''
+      const res   = await fetch('https://predictivefpl-production.up.railway.app/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('Could not start checkout. Please try again.')
+        setLoading(false)
+      }
+    } catch (e) {
+      alert('Error: ' + e.message)
+      setLoading(false)
+    }
   }
 
   const FREE_FEATURES = [
@@ -60,6 +75,18 @@ export default function UpgradePage() {
             </p>
           </div>
 
+          {/* Success / cancel banners */}
+          {success && (
+            <div className="rounded-2xl p-4 mb-6 text-center" style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)'}}>
+              <p className="text-green-400 font-bold">🎉 Welcome to Pro! Oracle is now unlocked.</p>
+              <button onClick={() => navigate('/oracle')} className="mt-2 text-sm text-green-300 underline">Open Oracle Optimizer →</button>
+            </div>
+          )}
+          {cancelled && (
+            <div className="rounded-2xl p-4 mb-6 text-center" style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
+              <p className="text-red-400 text-sm">Payment cancelled. You can upgrade any time.</p>
+            </div>
+          )}
           {/* Pricing cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
 
