@@ -70,6 +70,7 @@ function PlayerToken({ p, photoMap = {}, highlight = false }) {
 
 export default function OracleOptimizer() {
   const { user } = useUser()
+  const { isPro }      = useUserTier()
   const navigate  = useNavigate()
   const isAdmin   = ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress)
   const teamId    = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 const NAV = [
   { path: '/dashboard', icon: 'fa-gauge',        label: 'Dashboard' },
-  { path: '/squad',     icon: 'fa-shirt',         label: 'My Squad' },
+  { path: '/team',     icon: 'fa-shirt',         label: 'My Squad' },
   { path: '/insights',  icon: 'fa-chart-line',    label: 'Insights' },
   { path: '/rivals',    icon: 'fa-trophy',        label: 'Rivals' },
   { path: '/oracle',    icon: 'fa-brain',         label: 'AI Optimizer', highlight: true },
