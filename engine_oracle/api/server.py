@@ -11,7 +11,7 @@ Endpoints:
 import asyncio, os, sys, json
 from pathlib import Path
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from api.stripe_handler import create_checkout_session, stripe_webhook
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
