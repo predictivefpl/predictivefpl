@@ -12,7 +12,7 @@ import asyncio, os, sys, json
 from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI
-from api.stripe_handler import create_checkout_session, stripe_webhook, HTTPException, BackgroundTasks
+from api.stripe_handler import create_checkout_session, stripe_webhook
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
