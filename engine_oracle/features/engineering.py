@@ -117,7 +117,10 @@ def build_oracle_features(
                 opp = row["away_team"] if is_home else row["home_team"]
                 if pd.isna(opp): return 3.0
                 try:
-                    return elo.fdr_dynamic(int(team_id), int(opp))
+                    try:
+                        return elo.fdr_dynamic(int(team_id), int(opp))
+                    except Exception:
+                        return 3.0
                 except Exception:
                     return 3.0
             current["fdr_dynamic"] = current["team_id"].apply(_get_fdr)
@@ -275,7 +278,10 @@ def _build_from_players_only(players_df, fixtures_df, elo, current_gw):
             is_home = row["home_team"] == team_id
             opp = row["away_team"] if is_home else row["home_team"]
             if pd.isna(opp): return 3.0
-            return elo.fdr_dynamic(int(team_id), int(opp))
+            try:
+                return elo.fdr_dynamic(int(team_id), int(opp))
+            except Exception:
+                return 3.0
         except Exception:
             return 3.0
 
