@@ -66,7 +66,7 @@ def predict_oracle_xp(
     # FDR multiplier for current GW
     if "fdr_dynamic" in features_df.columns:
         fdr_mult = features_df["fdr_dynamic"].apply(
-            lambda x: FDR_MULT.get(int(round(float(x))), 1.0) if x == x else 1.0
+            lambda x: FDR_MULT.get(int(round(float(x))), 1.0) if x == x and x is not None else 1.0 if x == x else 1.0
         ).values
     else:
         fdr_mult = np.ones(len(features_df))
