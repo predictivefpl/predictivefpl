@@ -1,97 +1,83 @@
 
-/* ═══════════════════════════════════════════
-   PredictiveFPL — Mobile Responsive Styles
-═══════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   PredictiveFPL Mobile Responsive
+   Uses direct class names - no Tailwind deps
+════════════════════════════════════════════ */
 
-/* Content area: full width on mobile (sidebar hidden via md:flex) */
+/* ── Desktop: show sidebar, hide mobile nav ── */
+@media (min-width: 768px) {
+  .desktop-sidebar    { display: flex !important; }
+  .mobile-bottom-nav  { display: none !important; }
+  .mobile-overlay     { display: none !important; }
+}
+
+/* ── Mobile: hide sidebar, show bottom nav ─── */
 @media (max-width: 767px) {
+  .desktop-sidebar    { display: none !important; }
+  .mobile-bottom-nav  { display: flex !important; }
 
-  /* Bottom nav clearance */
+  /* Content area bottom padding for nav bar */
   .flex-1.flex.flex-col.overflow-hidden,
   .flex-1.overflow-y-auto {
     padding-bottom: 68px !important;
   }
 
-  /* Page padding */
+  /* Page padding reduction */
   .p-8  { padding: 1rem !important; }
   .p-6  { padding: 0.75rem !important; }
   .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
-  .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
 
-  /* Grids */
-  .grid.grid-cols-4 { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
-  .grid.grid-cols-3 { grid-template-columns: repeat(1,minmax(0,1fr)) !important; }
-
-  /* Oracle: stack config above results */
-  .flex-1.flex.overflow-hidden.flex-col.md\:flex-row {
+  /* Oracle: stack config panel above results */
+  .flex-1.flex.overflow-hidden {
     flex-direction: column !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 
-  /* Config panel: full width, collapsible height */
-  .w-72.flex-shrink-0,
-  .w-full.md\:w-72.flex-shrink-0 {
+  /* Config panel full width */
+  .w-72.flex-shrink-0 {
     width: 100% !important;
-    max-height: 280px;
+    max-height: 260px;
     overflow-y: auto;
     border-right: none !important;
     border-bottom: 1px solid rgba(255,255,255,0.07) !important;
   }
 
-  /* Results panel: full width */
-  .flex-1.overflow-y-auto.min-w-0 {
+  /* Grid: 4-col -> 2-col */
+  .grid.grid-cols-4 { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .grid.grid-cols-3 { grid-template-columns: repeat(1,minmax(0,1fr)) !important; }
+
+  /* Pitch: no horizontal overflow */
+  .relative.rounded-2xl.overflow-hidden {
     width: 100% !important;
-    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  /* Pitch: scale down to fit screen */
-  /* The pitch container */
-  .pitch-outer,
-  [class*="rounded-2xl"][class*="overflow-hidden"] > div[style*="linear-gradient"] {
-    width: 100% !important;
-    overflow-x: hidden !important;
-  }
-
-  /* Force pitch players to fit in smaller space */
-  /* Position rows on pitch */
-  .absolute[style*="bottom"] {
-    font-size: 10px !important;
-  }
-
-  /* KPI row */
-  .grid.grid-cols-4.gap-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
-  /* xP chart: scrollable */
-  .flex.gap-2.items-end {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Transfer popup: bottom sheet */
-  .fixed.inset-0.z-50 > div:last-child {
-    border-radius: 20px 20px 0 0 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-    max-height: 90dvh !important;
-    overflow-y: auto !important;
-  }
-
-  /* Headlines */
+  /* Reduce font sizes */
   .text-4xl { font-size: 1.75rem !important; }
   .text-3xl { font-size: 1.5rem !important; }
+
+  /* Transfer popup: bottom sheet */
+  .fixed.inset-0.z-50.flex.items-center {
+    align-items: flex-end !important;
+  }
+  .fixed.inset-0.z-50.flex.items-center > div:first-child {
+    border-radius: 24px 24px 0 0 !important;
+    max-height: 92dvh !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+  }
 }
 
 /* iOS safe area */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   @media (max-width: 767px) {
-    nav.fixed.bottom-0 {
+    .mobile-bottom-nav {
       height: calc(60px + env(safe-area-inset-bottom)) !important;
       padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+    .flex-1.flex.flex-col.overflow-hidden {
+      padding-bottom: calc(68px + env(safe-area-inset-bottom)) !important;
     }
   }
 }

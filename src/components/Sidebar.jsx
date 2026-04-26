@@ -32,7 +32,7 @@ export default function Sidebar() {
   return (
     <>
       {/* ── DESKTOP SIDEBAR (hidden on mobile via CSS) ──────────────────── */}
-      <aside className="hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 transition-all duration-200"
+      <aside className="flex flex-col h-screen sticky top-0 flex-shrink-0 transition-all duration-200 desktop-sidebar"
         style={{width: collapsed ? 60 : 220, background:'#0F121D', borderRight:'1px solid rgba(255,255,255,0.07)'}}>
 
         {/* Logo + toggle */}
@@ -103,7 +103,7 @@ export default function Sidebar() {
 
       {/* ── MOBILE OVERLAY (hidden on desktop) ──────────────────────────── */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
+        <div className="mobile-overlay fixed inset-0 z-50 flex">
           <div className="w-64 h-full flex flex-col py-6 px-3" style={{background:'#0F121D',borderRight:'1px solid rgba(255,255,255,0.07)'}}>
             <div className="flex items-center justify-between px-3 mb-8">
               <span className="font-bold text-white">Predictive<span className="text-blue-500">FPL</span></span>
@@ -148,7 +148,7 @@ export default function Sidebar() {
       )}
 
       {/* ── MOBILE BOTTOM NAV (hidden on desktop) ───────────────────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around"
+      <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around"
         style={{background:'rgba(15,18,29,0.97)',borderTop:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(16px)',height:60,paddingBottom:'env(safe-area-inset-bottom)'}}>
         {NAV.map(item => {
           const active = location.pathname === item.path
