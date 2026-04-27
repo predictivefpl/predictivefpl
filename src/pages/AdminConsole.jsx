@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar'
 const ENGINE_URL   = 'https://web-production-21545.up.railway.app'
 const ORACLE_URL   = 'https://predictivefpl-production.up.railway.app'
 const SUPABASE_URL = 'https://bpwopjvvalwuisbbvimj.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwd29wanZ2YWx3dWlzYmJ2aW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5MTI1NjMsImV4cCI6MjA1OTQ4ODU2M30.gFVi_DXbbQGBUSBkzFpbpN4GveDoVrGODOlGLsiSz6Q'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwd29wanZ2YWx3dWlzYmJ2aW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzMwODksImV4cCI6MjA5MDk0OTA4OX0.j7iIHWpsd0fKk9MRKEywSEWt90M7dokO5JR2D65GqeA'
 const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 
 const TIERS = {
