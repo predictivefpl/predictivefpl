@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useUserTier } from '../hooks/useUserTier'
+import { useIsMobile } from '../hooks/useIsMobile'
 import ProPaywall from '../components/ProPaywall'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
@@ -71,6 +72,7 @@ function PlayerToken({ p, photoMap = {}, highlight = false }) {
 export default function OracleOptimizer() {
   const { user } = useUser()
   const { isPro }      = useUserTier()
+  const isMobile       = useIsMobile()
   const navigate  = useNavigate()
   const isAdmin   = ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress)
   const teamId    = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')
@@ -670,7 +672,7 @@ export default function OracleOptimizer() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
+    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white" style={{paddingBottom: isMobile ? 60 : 0}}>
       {renderPopup()}
       <Sidebar/>
       {!isPro && <ProPaywall />}

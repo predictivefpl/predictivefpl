@@ -1,83 +1,42 @@
 
-/* ════════════════════════════════════════════
-   PredictiveFPL Mobile Responsive
-   Uses direct class names - no Tailwind deps
-════════════════════════════════════════════ */
+/* PredictiveFPL — Mobile styles (supplement to React-based layout) */
+/* Sidebar and layout switching is handled by React useIsMobile hook */
+/* This file handles pitch scaling and misc mobile polish */
 
-/* ── Desktop: show sidebar, hide mobile nav ── */
-@media (min-width: 768px) {
-  .desktop-sidebar    { display: flex !important; }
-  .mobile-bottom-nav  { display: none !important; }
-  .mobile-overlay     { display: none !important; }
-}
-
-/* ── Mobile: hide sidebar, show bottom nav ─── */
 @media (max-width: 767px) {
-  .desktop-sidebar    { display: none !important; }
-  .mobile-bottom-nav  { display: flex !important; }
+  /* Bottom nav padding for all pages */
+  body { padding-bottom: 60px; }
 
-  /* Content area bottom padding for nav bar */
-  .flex-1.flex.flex-col.overflow-hidden,
-  .flex-1.overflow-y-auto {
-    padding-bottom: 68px !important;
-  }
-
-  /* Page padding reduction */
+  /* Reduce page padding */
   .p-8  { padding: 1rem !important; }
   .p-6  { padding: 0.75rem !important; }
   .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
 
-  /* Oracle: stack config panel above results */
-  .flex-1.flex.overflow-hidden {
-    flex-direction: column !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-  }
-
-  /* Config panel full width */
-  .w-72.flex-shrink-0 {
-    width: 100% !important;
-    max-height: 260px;
-    overflow-y: auto;
-    border-right: none !important;
-    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
-  }
-
-  /* Grid: 4-col -> 2-col */
+  /* KPI grids */
   .grid.grid-cols-4 { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
   .grid.grid-cols-3 { grid-template-columns: repeat(1,minmax(0,1fr)) !important; }
 
-  /* Pitch: no horizontal overflow */
-  .relative.rounded-2xl.overflow-hidden {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
+  /* Pitch: scale down to fit, no overflow */
+  .pitch-outer { overflow: hidden !important; width: 100% !important; }
 
-  /* Reduce font sizes */
-  .text-4xl { font-size: 1.75rem !important; }
-  .text-3xl { font-size: 1.5rem !important; }
-
-  /* Transfer popup: bottom sheet */
-  .fixed.inset-0.z-50.flex.items-center {
-    align-items: flex-end !important;
-  }
-  .fixed.inset-0.z-50.flex.items-center > div:first-child {
-    border-radius: 24px 24px 0 0 !important;
-    max-height: 92dvh !important;
+  /* Transfer popup: slide up from bottom */
+  .oracle-popup-backdrop { align-items: flex-end !important; }
+  .oracle-popup-modal {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90dvh !important;
     overflow-y: auto !important;
     width: 100% !important;
+    margin: 0 !important;
   }
 }
 
 /* iOS safe area */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   @media (max-width: 767px) {
-    .mobile-bottom-nav {
-      height: calc(60px + env(safe-area-inset-bottom)) !important;
+    nav[style*="position:fixed"][style*="bottom:0"],
+    nav[style*="position: fixed"][style*="bottom: 0"] {
       padding-bottom: env(safe-area-inset-bottom) !important;
-    }
-    .flex-1.flex.flex-col.overflow-hidden {
-      padding-bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+      height: calc(60px + env(safe-area-inset-bottom)) !important;
     }
   }
 }
