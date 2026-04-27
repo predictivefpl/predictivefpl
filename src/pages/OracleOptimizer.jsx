@@ -895,9 +895,9 @@ export default function OracleOptimizer() {
                 {/* Squad Tab */}
                 {activeTab === 'squad' && result.squad?.length > 0 && (
                   <GlassCard className="overflow-hidden">
-                    <div className="relative rounded-2xl overflow-hidden">
+                    <div className="relative rounded-2xl overflow-hidden" style={{width:"100%",aspectRatio:"400/580",minHeight:0}}>
                       <div className="absolute inset-0" style={{backgroundImage:'linear-gradient(180deg,rgba(16,100,40,0.85) 0%,rgba(20,120,50,0.85) 25%,rgba(16,100,40,0.85) 50%,rgba(20,120,50,0.85) 75%,rgba(16,100,40,0.85) 100%)',backgroundSize:'100% 20%'}}/>
-                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 520" preserveAspectRatio="none" style={{opacity:0.18}}>
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 580" preserveAspectRatio="none" style={{opacity:0.18}}>
                         <rect x="10" y="10" width="380" height="500" fill="none" stroke="white" strokeWidth="2"/>
                         <circle cx="200" cy="260" r="50" fill="none" stroke="white" strokeWidth="1.5"/>
                         <line x1="10" y1="260" x2="390" y2="260" stroke="white" strokeWidth="1.5"/>
@@ -907,9 +907,9 @@ export default function OracleOptimizer() {
                         <rect x="145" y="470" width="110" height="40" fill="none" stroke="white" strokeWidth="1.5"/>
                         <circle cx="200" cy="260" r="3" fill="white"/>
                       </svg>
-                      <div className="relative z-10 p-4 pt-6 pb-4 space-y-5">
+                      <div className="relative z-10 space-y-0" style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",justifyContent:"space-evenly",padding:"12px 8px"}}>
                         {posRows.map((row, ri) => row.length > 0 && (
-                          <div key={ri} className="flex justify-around w-full px-2">
+                          <div key={ri} style={{display:"flex",justifyContent:"space-evenly",alignItems:"center",width:"100%"}}>
                             {row.map((p, pi) => <PlayerToken key={pi} p={p} photoMap={photoMap} highlight={newIds.has(p.player_id)}/>)}
                           </div>
                         ))}
