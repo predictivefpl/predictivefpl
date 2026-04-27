@@ -43,8 +43,8 @@ function PlayerToken({ p, photoMap = {}, highlight = false }) {
   const surname = (p.name || '').includes(' ') ? (p.name||'').split(' ').pop() : (p.name||'').split('.').pop()
   const isNew  = highlight
   return (
-    <div className="flex flex-col items-center gap-1 cursor-default" style={{minWidth:68}}>
-      <div className="relative" style={{width:60,height:60}}>
+    <div className="flex flex-col items-center cursor-default" style={{flex:1,maxWidth:80,minWidth:0,gap:2}}>
+      <div className="relative" style={{width:"min(52px,12vw)",height:"min(52px,12vw)"}}>
         {isNew && <div className="absolute inset-0 rounded-full" style={{background:`radial-gradient(circle,${col}55 0%,transparent 70%)`,transform:'scale(1.4)'}}/>}
         <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"
           style={{borderColor: isNew ? col : p.is_captain ? '#facc15' : 'rgba(255,255,255,0.2)',
@@ -272,7 +272,7 @@ export default function OracleOptimizer() {
                 </div>
                 {/* Type badge */}
                 <div className="flex-shrink-0">
-                  {isDGW && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{background:'rgba(16,185,129,0.2)',color:'#10b981'}}>DGW</span>}
+                  {isDGW && <span className="font-black px-1 py-0.5 rounded" style={{fontSize:"min(9px,2.2vw)",background:'rgba(16,185,129,0.2)',color:'#10b981'}}>DGW</span>}
                   {isBGW && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{background:'rgba(239,68,68,0.2)',color:'#ef4444'}}>BGW</span>}
                   {isNormal && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{background:'rgba(255,255,255,0.06)',color:'#6b7280'}}>—</span>}
                 </div>
@@ -894,8 +894,8 @@ export default function OracleOptimizer() {
 
                 {/* Squad Tab */}
                 {activeTab === 'squad' && result.squad?.length > 0 && (
-                  <GlassCard className="overflow-hidden">
-                    <div className="relative rounded-2xl overflow-hidden" style={{width:"100%",aspectRatio:"400/580",minHeight:0}}>
+                  <GlassCard className="overflow-hidden" style={{padding:0}}>
+                    <div style={{width:"100%",aspectRatio:"400/580",position:"relative",borderRadius:12,overflow:"hidden"}}>
                       <div className="absolute inset-0" style={{backgroundImage:'linear-gradient(180deg,rgba(16,100,40,0.85) 0%,rgba(20,120,50,0.85) 25%,rgba(16,100,40,0.85) 50%,rgba(20,120,50,0.85) 75%,rgba(16,100,40,0.85) 100%)',backgroundSize:'100% 20%'}}/>
                       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 580" preserveAspectRatio="none" style={{opacity:0.18}}>
                         <rect x="10" y="10" width="380" height="500" fill="none" stroke="white" strokeWidth="2"/>
@@ -909,7 +909,7 @@ export default function OracleOptimizer() {
                       </svg>
                       <div className="relative z-10 space-y-0" style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",justifyContent:"space-evenly",padding:"12px 8px"}}>
                         {posRows.map((row, ri) => row.length > 0 && (
-                          <div key={ri} style={{display:"flex",justifyContent:"space-evenly",alignItems:"center",width:"100%"}}>
+                          <div key={ri} style={{display:"flex",justifyContent:"space-evenly",alignItems:"flex-start",width:"100%",gap:2}}>
                             {row.map((p, pi) => <PlayerToken key={pi} p={p} photoMap={photoMap} highlight={newIds.has(p.player_id)}/>)}
                           </div>
                         ))}
