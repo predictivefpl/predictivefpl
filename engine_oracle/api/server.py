@@ -76,6 +76,22 @@ def _load_cache():
             print(f"Cache load error: {e}")
 
 
+# ── Supabase keepalive — pings every 4 days to prevent free tier pause ──────
+async def _supabase_keepalive():
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "https://bpwopjvvalwuisbbvimj.supabase.co")
+    SUPA_KEY  = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    while True:
+        await asyncio.sleep(4 * 24 * 3600)  # every 4 days
+        try:
+            async with aiohttp.ClientSession() as s:
+                await s.get(f"{SUPA_URL}/rest/v1/users?select=id&limit=1",
+                    headers={"apikey": SUPA_KEY, "Authorization": f"Bearer {SUPA_KEY}"},
+                    timeout=aiohttp.ClientTimeout(total=10))
+            print("Supabase keepalive ping sent")
+        except Exception as e:
+            print(f"Supabase keepalive failed: {e}")
+
 @app.on_event("startup")
 async def startup():
     _load_cache()
