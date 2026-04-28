@@ -43,8 +43,8 @@ function PlayerToken({ p, photoMap = {}, highlight = false }) {
   const surname = (p.name || '').includes(' ') ? (p.name||'').split(' ').pop() : (p.name||'').split('.').pop()
   const isNew  = highlight
   return (
-    <div className="flex flex-col items-center cursor-default" style={{flex:1,maxWidth:90,minWidth:0,gap:2}}>
-      <div className="relative" style={{width:"clamp(36px,11vw,56px)",height:"clamp(36px,11vw,56px)"}}>
+    <div className="flex flex-col items-center cursor-default" style={{flex:1,maxWidth:110,minWidth:0,gap:3}}>
+      <div className="relative" style={{width:"clamp(38px,9vw,68px)",height:"clamp(38px,9vw,68px)"}}>
         {isNew && <div className="absolute inset-0 rounded-full" style={{background:`radial-gradient(circle,${col}55 0%,transparent 70%)`,transform:'scale(1.4)'}}/>}
         <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"
           style={{borderColor: isNew ? col : p.is_captain ? '#facc15' : 'rgba(255,255,255,0.2)',
@@ -95,6 +95,7 @@ export default function OracleOptimizer() {
   const [result, setResult]         = useState(null)
   const [running, setRunning]       = useState(false)
   const [showPopup, setShowPopup]     = useState(false)
+  const [mobileView, setMobileView]   = useState("config") // "config" | "result"
   const [training, setTraining]     = useState(false)
   const [error, setError]           = useState('')
   const [activeTab, setActiveTab]   = useState('squad')
@@ -894,7 +895,7 @@ export default function OracleOptimizer() {
 
                 {/* Squad Tab */}
                 {activeTab === 'squad' && result.squad?.length > 0 && (
-                  <GlassCard className="overflow-hidden" style={{padding:0,maxWidth:520,margin:"0 auto"}}>
+                  <GlassCard className="overflow-hidden" style={{padding:0,maxWidth: isMobile ? "100%" : 720,margin:"0 auto"}}>
                     <div style={{width:"100%",aspectRatio:"400/580",position:"relative",borderRadius:12,overflow:"hidden"}}>
                       <div className="absolute inset-0" style={{backgroundImage:'linear-gradient(180deg,rgba(16,100,40,0.85) 0%,rgba(20,120,50,0.85) 25%,rgba(16,100,40,0.85) 50%,rgba(20,120,50,0.85) 75%,rgba(16,100,40,0.85) 100%)',backgroundSize:'100% 20%'}}/>
                       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 580" preserveAspectRatio="none" style={{opacity:0.18}}>
