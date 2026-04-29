@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const POS_COLOR = { GKP:'#f59e0b', DEF:'#10b981', MID:'#3b82f6', FWD:'#ef4444' }
 
@@ -11,7 +12,7 @@ function PlayerToken({ p, photoMap, selected, onClick }) {
   const imgUrl  = photo ? 'https://resources.premierleague.com/premierleague/photos/players/110x140/p' + photo + '.png' : null
   const surname = p.name.includes(' ') ? p.name.split(' ').pop() : p.name
   return (
-    <div className="flex flex-col items-center gap-1 cursor-pointer" style={{minWidth:68}} onClick={() => onClick && onClick(p)}>
+    <div className="flex flex-col items-center gap-1 cursor-pointer" style={{flex:1,maxWidth:110,minWidth:0,gap:3}} onClick={() => onClick && onClick(p)}>
       <div className="relative" style={{width:62,height:62}}>
         {selected && <div className="absolute inset-0 rounded-full" style={{background:'radial-gradient(circle, '+col+'55 0%, transparent 70%)',transform:'scale(1.4)'}}/>}
         <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"

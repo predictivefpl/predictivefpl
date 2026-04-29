@@ -552,7 +552,7 @@ export default function OracleOptimizer() {
                     Play <span className="font-bold capitalize" style={{color:chipColor[chip]}}>{chip}</span> in GW{gwTarget}
                     {dgwCount >= 2 ? ` — ${dgwCount} teams have double fixtures, maximising chip value.` :
                      bgwCount >= 5 ? ` — ${bgwCount} teams blank, Free Hit lets you cover all playing teams.` :
-                     ' — optimal timing based on 8-GW rolling MIP analysis.'}
+                     ' — optimal timing based on 5-GW rolling MIP analysis.'}
                   </p>
                 )
               })}
@@ -688,7 +688,7 @@ export default function OracleOptimizer() {
             </div>
             <div>
               <span className="text-xl font-black bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Oracle Optimizer</span>
-              <span className="text-xs text-gray-500 ml-2">8-GW MIP Engine</span>
+              <span className="text-xs text-gray-500 ml-2">5-GW Greedy Engine</span>
             </div>
 
           </div>
@@ -852,7 +852,7 @@ export default function OracleOptimizer() {
                   <i className="fa-solid fa-brain text-3xl" style={{color:'#a855f7'}}/>
                 </div>
                 <p className="text-lg font-bold text-gray-500">Oracle Optimizer</p>
-                <p className="text-sm text-gray-600 mt-1">8-GW MIP • Chip Timing • Transfer Option Value</p>
+                <p className="text-sm text-gray-600 mt-1">5-GW Engine • Chip Timing • Transfer Option Value</p>
                 <p className="text-xs text-gray-700 mt-3">Configure parameters and click Run Oracle</p>
               </div>
             )}

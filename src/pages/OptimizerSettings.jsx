@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const getLS = (key, fallback) => {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback }
@@ -281,7 +282,7 @@ export default function OptimizerSettings() {
       const col     = posColor[p.position] || '#6b7280'
       const surname = p.name.includes('.') ? p.name.split('.').pop()?.trim() : p.name.split(' ').pop()
       return (
-        <div className="flex flex-col items-center gap-1" style={{minWidth:68}}>
+        <div className="flex flex-col items-center gap-1" style={{flex:1,maxWidth:110,minWidth:0,gap:3}}>
           <div className="relative" style={{width:62,height:62}}>
             {isNew && (
               <div className="absolute inset-0 rounded-full" style={{background:'radial-gradient(circle, ' + col + '44 0%, transparent 70%)', transform:'scale(1.4)'}}/>

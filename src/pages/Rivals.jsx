@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import Sidebar from '../components/Sidebar'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const ENGINE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:8000'
   : 'https://web-production-21545.up.railway.app'
 
 export default function Rivals() {
+  const isMobile = useIsMobile()
   const { user } = useUser()
   const teamId = user?.unsafeMetadata?.fplTeamId || localStorage.getItem('fplTeamId')
 
@@ -110,11 +112,11 @@ export default function Rivals() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white">
+    <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white" style={{paddingBottom: isMobile ? 60 : 0}}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-8 py-4 border-b border-gray-800/50 flex-shrink-0">
+        <div className="flex items-center justify-between py-4 border-b border-gray-800/50 flex-shrink-0" style={{paddingLeft: isMobile ? 16 : 32, paddingRight: isMobile ? 16 : 32}}>
           <div className="flex items-center gap-3">
             <i className="fa-solid fa-trophy text-yellow-400 text-xl"/>
             <span className="text-xl font-bold text-white">Rivals</span>
@@ -166,7 +168,7 @@ export default function Rivals() {
 
                 {/* Stats bar */}
                 {standings.length > 0 && myRank && (
-                  <div className="grid grid-cols-3 gap-3 mb-5">
+                  <div className="grid gap-3 mb-5" style={{gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap:12}}>
                     {[
                       { label: 'Your Rank',    value: '#' + myRank.rank,              color: 'text-blue-400',   icon: 'fa-ranking-star' },
                       { label: 'Last GW',      value: (myRank.last_rank - myRank.rank) >= 0 ? '▲' + Math.abs(myRank.last_rank - myRank.rank) : '▼' + Math.abs(myRank.last_rank - myRank.rank), color: (myRank.last_rank - myRank.rank) >= 0 ? 'text-green-400' : 'text-red-400', icon: 'fa-arrow-trend-up' },
