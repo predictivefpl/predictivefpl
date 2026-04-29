@@ -234,6 +234,7 @@ export default function OracleOptimizer() {
       setResult(data)
       setActiveTab('squad')
       setShowPopup(true)
+      if (window.innerWidth < 768) setMobileView('result')
     } catch(e) { setError('Optimiser failed: ' + e.message) }
     setRunning(false)
   }
