@@ -719,10 +719,10 @@ export default function OracleOptimizer() {
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-6 flex gap-6">
+        <main className="flex-1 overflow-y-auto p-6" style={{display:"flex",gap:24,flexDirection: isMobile ? "column" : "row"}}>
 
           {/* ── Left Config Panel ──────────────────────────────────────────── */}
-          <div className="w-68 flex-shrink-0 space-y-3" style={{width:260}}>
+          <div className="space-y-3" style={{width: isMobile ? "100%" : 260, flexShrink:0, display: (isMobile && mobileView === "result") ? "none" : "block"}}>
 
             {/* Engine Status */}
             {status && (
@@ -835,7 +835,14 @@ export default function OracleOptimizer() {
           </div>
 
           {/* ── Right Results Panel ────────────────────────────────────────── */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" style={{display: (isMobile && mobileView === "config") ? "none" : "block", width: isMobile ? "100%" : "auto"}}>
+            {isMobile && mobileView === "result" && (
+              <button onClick={() => setMobileView("config")}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",marginBottom:12,background:"rgba(168,85,247,0.12)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:12,color:"#c084fc",fontSize:13,fontWeight:600,cursor:"pointer",width:"100%"}}>
+                <i className="fa-solid fa-chevron-left" style={{fontSize:11}}/>
+                Back to Settings
+              </button>
+            )}
             {error && <GlassCard className="p-4 mb-4 border-red-500/30"><p className="text-red-400 text-sm"><i className="fa-solid fa-triangle-exclamation mr-2"/>{error}</p></GlassCard>}
 
             {!result && !running && (
