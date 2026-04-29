@@ -210,9 +210,41 @@ def _solve_best_squad(df: pd.DataFrame, budget: float, horizon: int = 5) -> dict
         pos_counts[pos] += 1
         club_counts[club] = club_counts.get(club, 0) + 1
         spent += price
-
         if len(squad) == SQUAD_SIZE:
             break
+
+    # Pass 2: if squad incomplete, fill with cheapest valid players
+    if len(squad) < SQUAD_SIZE:
+        used_pids = {int(p.get("player_id", 0)) for p in squad}
+        df_cheap = df.sort_values("price", ascending=True).copy()
+        for _, row in df_cheap.iterrows():
+            if len(squad) == SQUAD_SIZE: break
+            p = row.to_dict()
+            pos  = p.get("position")
+            club = p.get("team_short", "UNK")
+            pid  = int(p.get("player_id", 0))
+            if pid in used_pids: continue
+            if pos not in POS_QUOTA: continue
+            if pos_counts[pos] >= POS_QUOTA[pos]: continue
+            if club_counts.get(club, 0) >= MAX_CLUB: continue
+            squad.append(p); used_pids.add(pid)
+            pos_counts[pos] += 1
+            club_counts[club] = club_counts.get(club, 0) + 1
+
+    # Pass 3: still short? Relax club rule
+    if len(squad) < SQUAD_SIZE:
+        used_pids = {int(p.get("player_id", 0)) for p in squad}
+        df_cheap = df.sort_values("price", ascending=True).copy()
+        for _, row in df_cheap.iterrows():
+            if len(squad) == SQUAD_SIZE: break
+            p = row.to_dict()
+            pos = p.get("position")
+            pid = int(p.get("player_id", 0))
+            if pid in used_pids: continue
+            if pos not in POS_QUOTA: continue
+            if pos_counts[pos] >= POS_QUOTA[pos]: continue
+            squad.append(p); used_pids.add(pid)
+            pos_counts[pos] += 1
 
     squad = _assign_xi(squad, horizon)
     total_xp = sum(_score(p, horizon) for p in squad if p.get("is_starter"))
