@@ -938,8 +938,10 @@ export default function OracleOptimizer() {
 
                 {/* Players In vs Players Out */}
                 {result?.squad?.length > 0 && (() => {
-                  const ins  = (result.squad||[]).filter(p => newIds.has(p.player_id))
-                  const outs = (result.transfers||[]).filter(t => t.action==='out')
+                  // Source of truth = backend transfers list. Map "in" entries back to full squad data for photos.
+                  const outs    = (result.transfers||[]).filter(t => t.action==='out')
+                  const inIds   = new Set((result.transfers||[]).filter(t => t.action==='in').map(t => t.player_id))
+                  const ins     = (result.squad||[]).filter(p => inIds.has(p.player_id))
                   if (!ins.length && !outs.length) return null
                   return (
                     <div className="mt-3 grid grid-cols-2 gap-3">
