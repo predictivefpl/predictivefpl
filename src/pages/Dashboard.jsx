@@ -5,7 +5,7 @@ import { useUser } from '@clerk/clerk-react'
 
 const fetchFPL = async (path) => {
   const isLocal = false // Always use Railway engine
-  const ENGINE_URL = 'https://web-production-21545.up.railway.app'
+  const ENGINE_URL = 'https://predictivefpl-production.up.railway.app'
   const url = isLocal ? "/fpl" + path : "/api/fpl?path=" + encodeURIComponent(path)
   const res = await fetch(url)
   if (!res.ok) throw new Error("FPL API error")
@@ -42,7 +42,7 @@ export default function Dashboard() {
 
   const checkEngine = async () => {
     try {
-      const status = await fetchEngine("/api/status")
+      const status = await fetchEngine("/api/oracle/status")
       setEngineStatus(status)
       if (status.predictions_cached) loadEngineData()
     } catch (e) {}
