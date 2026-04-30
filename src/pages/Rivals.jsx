@@ -130,7 +130,7 @@ export default function Rivals() {
           )}
         </div>
 
-        <main className="flex-1 overflow-y-auto p-6 flex gap-6">
+        <main className="flex-1 overflow-y-auto  flex ga" style={{padding: isMobile ? 8 : 32}}>
           {/* League selector */}
           <div className="w-64 flex-shrink-0 space-y-2">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 px-1">Your Leagues</p>
@@ -190,6 +190,7 @@ export default function Rivals() {
                 {/* Standings table */}
                 {standings.length > 0 && (
                   <div className="glass-card rounded-2xl border border-gray-700/50 overflow-hidden">
+                    {!isMobile && (
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-700/50">
@@ -249,6 +250,48 @@ export default function Rivals() {
                         })}
                       </tbody>
                     </table>
+                  )}
+                  {/* Mobile cards */}
+                  {isMobile && (
+                    <div style={{display:"flex",flexDirection:"column",gap:8,padding:8}}>
+                      {standings.slice(0, 20).map((s, i) => {
+                        const isMe = String(s.entry) === String(teamId)
+                        const gap  = s.total - (myRank?.total || 0)
+                        return (
+                          <div key={s.entry}
+                            style={{padding:12,borderRadius:10,
+                              background: isMe ? "rgba(59,130,246,0.1)" : "rgba(255,255,255,0.03)",
+                              border: "1px solid " + (isMe ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.06)")}}>
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+                                <span style={{fontSize:14,fontWeight:700,color: s.rank <= 3 ? "#fbbf24" : "#9ca3af",minWidth:28}}>
+                                  {s.rank <= 3 ? ["🥇","🥈","🥉"][s.rank-1] : "#" + s.rank}
+                                </span>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <p style={{margin:0,fontSize:13,fontWeight:600,color: isMe ? "#93c5fd" : "white",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                    {s.entry_name}{isMe && " (you)"}
+                                  </p>
+                                  <p style={{margin:0,fontSize:11,color:"#6b7280",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.player_name}</p>
+                                </div>
+                              </div>
+                              <div style={{textAlign:"right",flexShrink:0}}>
+                                <p style={{margin:0,fontSize:14,fontWeight:700,color:"white"}}>{s.total}</p>
+                                <p style={{margin:0,fontSize:10,color:"#6b7280"}}>total</p>
+                              </div>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:"#9ca3af",paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+                              <span>GW{currentGW}: <strong style={{color:"#e5e7eb"}}>{s.event_total}</strong></span>
+                              {!isMe && (
+                                <span style={{color: gap >= 0 ? "#10b981" : "#ef4444"}}>
+                                  {gap >= 0 ? "+" : ""}{gap} vs you
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                     {standings.length > 20 && (
                       <div className="px-4 py-3 border-t border-gray-800/30 text-center">
                         <p className="text-xs text-gray-500">Showing top 20 of {standings.length} entries</p>
