@@ -11,6 +11,7 @@ import OptimizerSettings from './pages/OptimizerSettings'
 import Rivals from './pages/Rivals'
 import OracleOptimizer from './pages/OracleOptimizer'
 import UpgradePage from './pages/UpgradePage'
+import UserSync from './components/UserSync'
 import AccountSettings from './pages/AccountSettings'
 import Settings from './pages/Settings'
 
@@ -24,6 +25,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <UserSync />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/connect" element={<ProtectedRoute><ConnectFPL /></ProtectedRoute>} />
