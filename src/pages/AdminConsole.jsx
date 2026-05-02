@@ -11,9 +11,7 @@ const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 
 const TIERS = {
   free:    { label: 'Free',    color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
-  pro:     { label: 'Pro',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  premium: { label: 'Premium', color: '#a855f7', bg: 'rgba(168,85,247,0.12)' },
-}
+  pro:     { label: 'Pro',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' }, color: '#a855f7', bg: 'rgba(168,85,247,0.12)' }}
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 function Card({ children, className = '' }) {
@@ -110,7 +108,7 @@ export default function AdminConsole() {
   const allUsers    = users || []
   const freeCount   = allUsers.filter(u => !u.tier || u.tier === 'free').length
   const proCount    = allUsers.filter(u => u.tier === 'pro').length
-  const premCount   = allUsers.filter(u => u.tier === 'premium').length
+  const    = allUsers.filter(u => u.tier ===).length
 
   // signup trend: users joined in last 7 days
   const last7 = allUsers.filter(u => {
@@ -175,6 +173,21 @@ export default function AdminConsole() {
     fetchPromos()
   }
 
+  const setUserTier = async (userId, newTier, userEmail) => {
+    if (!confirm(`Set ${userEmail} to "${newTier}"?`)) return
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json', Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({ tier: newTier })
+      })
+      fetchUsers()
+    } catch (e) { alert('Error: ' + e.message) }
+  }
+
   const grantPro = async (userId, userEmail) => {
     if (!confirm(`Grant Pro access to ${userEmail}?`)) return
     try {
@@ -230,8 +243,7 @@ export default function AdminConsole() {
     { id: 'overview',    label: 'Overview',     icon: 'fa-chart-pie' },
     { id: 'users',       label: 'Users',        icon: 'fa-users' },
     { id: 'marketing',   label: 'Marketing',    icon: 'fa-envelope' },
-    { id: 'systems',     label: 'Systems',      icon: 'fa-server' },
-  ]
+    { id: 'systems',     label: 'Systems',      icon: 'fa-server' }]
 
   return (
     <div className="min-h-screen bg-[#0B0D14] flex text-white">
@@ -257,8 +269,7 @@ export default function AdminConsole() {
               {[
                 { label: 'FPL API', ok: fplOk },
                 { label: 'Oracle',  ok: oracleOk },
-                { label: 'Engine',  ok: engineOk },
-              ].map(({ label, ok }) => (
+                { label: 'Engine',  ok: engineOk }].map(({ label, ok }) => (
                 <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border"
                   style={{ background: ok ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', borderColor: ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)', color: ok ? '#34d399' : '#f87171' }}>
                   <StatusDot ok={ok} />
@@ -293,7 +304,7 @@ export default function AdminConsole() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Kpi label="Total Users"    value={allUsers.length || null} sub={`+${last7} this week`}  icon="fa-users"      color="#3b82f6" loading={users === null} />
                 <Kpi label="Pro Members"    value={proCount || null}  sub="Active subscriptions"         icon="fa-star"       color="#a855f7" loading={users === null} />
-                <Kpi label="Premium Members"value={premCount || null} sub="Top tier"                     icon="fa-crown"      color="#f59e0b" loading={users === null} />
+                <Kpi label="Premium Members"value={ || null} sub="Top tier"                     icon="fa-crown"      color="#f59e0b" loading={users === null} />
                 <Kpi label="Free Users"     value={freeCount || null} sub="Conversion targets"           icon="fa-user"       color="#10b981" loading={users === null} />
               </div>
 
@@ -315,7 +326,7 @@ export default function AdminConsole() {
                   </h3>
                   {users === null
                     ? <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 rounded-xl bg-white/5 animate-pulse" />)}</div>
-                    : ['free','pro','premium'].map(tier => {
+                    : ['free','pro'].map(tier => {
                         const count = allUsers.filter(u => (u.tier || 'free') === tier).length
                         const pct   = allUsers.length ? Math.round((count / allUsers.length) * 100) : 0
                         const t     = TIERS[tier]
@@ -375,8 +386,7 @@ export default function AdminConsole() {
                     { label: 'Clerk Dashboard', icon: 'fa-user-shield', col: '#6366f1', action: () => window.open('https://dashboard.clerk.com') },
                     { label: 'Supabase',        icon: 'fa-database',    col: '#10b981', action: () => window.open('https://supabase.com/dashboard') },
                     { label: 'Railway',         icon: 'fa-train',       col: '#a855f7', action: () => window.open('https://railway.app/dashboard') },
-                    { label: 'Vercel',          icon: 'fa-triangle-exclamation', col: '#e5e7eb', action: () => window.open('https://vercel.com/dashboard') },
-                  ].map(({ label, icon, col, action, loading }) => (
+                    { label: 'Vercel',          icon: 'fa-triangle-exclamation', col: '#e5e7eb', action: () => window.open('https://vercel.com/dashboard') }].map(({ label, icon, col, action, loading }) => (
                     <button key={label} onClick={action} disabled={!!loading}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all disabled:opacity-40"
                       style={{ borderColor: col + '33', color: col, background: col + '0d' }}
@@ -406,14 +416,14 @@ export default function AdminConsole() {
                     className="bg-white/[0.04] border border-white/[0.08] rounded-xl pl-8 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 w-72 placeholder-gray-600" />
                 </div>
                 <div className="flex gap-1.5">
-                  {['all','free','pro','premium'].map(t => (
+                  {['all','free','pro'].map(t => (
                     <button key={t} onClick={() => setTierFilter(t)}
                       className={'px-3 py-2 rounded-xl text-xs font-bold border transition-all ' +
                         (tierFilter === t ? 'bg-white text-black border-white' : 'border-white/10 text-gray-500 hover:text-white hover:border-white/30')}>
                       {t.charAt(0).toUpperCase() + t.slice(1)}
                       {t !== 'all' && users !== null && (
                         <span className="ml-1.5 opacity-60">
-                          {t === 'free' ? freeCount : t === 'pro' ? proCount : premCount}
+                          {t === 'free' ? freeCount : t === 'pro' ? proCount : }
                         </span>
                       )}
                     </button>
@@ -441,7 +451,7 @@ export default function AdminConsole() {
                         <table className="w-full text-sm">
                           <thead className="border-b border-white/[0.06]">
                             <tr className="text-[11px] text-gray-500 uppercase tracking-widest">
-                              {['User','Email','FPL Team ID','Tier','Joined','Last Login','Access'].map(h => (
+                              {['User','Email','FPL Team ID','Tier','Joined','Last Login','Actions'].map(h => (
                                 <th key={h} className="px-5 py-4 text-left font-semibold">{h}</th>
                               ))}
                             </tr>
@@ -482,6 +492,20 @@ export default function AdminConsole() {
                                   </td>
                                   <td className="px-5 py-3.5 text-gray-500 text-xs">
                                     {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '—'}
+                                  </td>
+                                  <td className="px-5 py-3.5">
+                                    <select
+                                      value={u.tier || 'free'}
+                                      onChange={(e) => setUserTier(u.id, e.target.value, u.email)}
+                                      className="text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer focus:outline-none transition-all"
+                                      style={{
+                                        background: (u.tier === 'pro') ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.04)',
+                                        border: '1px solid ' + ((u.tier === 'pro') ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.1)'),
+                                        color: (u.tier === 'pro') ? '#c084fc' : 'white',
+                                      }}>
+                                      <option value="free" style={{background:'#0F121D',color:'white'}}>Free</option>
+                                      <option value="pro"  style={{background:'#0F121D',color:'white'}}>Pro</option>
+                                    </select>
                                   </td>
                                 </tr>
                               )
@@ -540,8 +564,7 @@ export default function AdminConsole() {
                 {[
                   { tier: 'free',    icon: 'fa-user',  msg: 'Upsell to Pro — highlight Oracle AI picks and rival tracking.' },
                   { tier: 'pro',     icon: 'fa-star',  msg: 'Upsell to Premium — deeper analysis, chip timing advisor.' },
-                  { tier: 'premium', icon: 'fa-crown', msg: 'Retain — exclusive features, early GW previews.' },
-                ].map(({ tier, icon, msg }) => {
+                  { tier:, icon: 'fa-crown', msg: 'Retain — exclusive features, early GW previews.' }].map(({ tier, icon, msg }) => {
                   const t     = TIERS[tier]
                   const count = allUsers.filter(u => (u.tier || 'free') === tier).length
                   const emails = allUsers.filter(u => (u.tier || 'free') === tier && u.email).map(u => u.email)
@@ -583,8 +606,7 @@ export default function AdminConsole() {
                   {[
                     { name: 'Resend',     desc: 'Transactional email API. Free 3k/month. Best for one-click broadcasts.',  url: 'https://resend.com', col: '#000' },
                     { name: 'Stripe',     desc: 'Payments + subscriptions. Add Pro/Premium tiers with a single webhook.',   url: 'https://stripe.com',  col: '#635bff' },
-                    { name: 'PostHog',    desc: 'Product analytics. See which features users actually use.',                url: 'https://posthog.com', col: '#f54e00' },
-                  ].map(({ name, desc, url, col }) => (
+                    { name: 'PostHog',    desc: 'Product analytics. See which features users actually use.',                url: 'https://posthog.com', col: '#f54e00' }].map(({ name, desc, url, col }) => (
                     <a key={name} href={url} target="_blank" rel="noreferrer"
                       className="flex flex-col gap-2 p-4 rounded-xl border border-white/[0.06] hover:border-white/20 bg-white/[0.02] transition-all group">
                       <div className="flex items-center justify-between">
@@ -623,8 +645,7 @@ export default function AdminConsole() {
                           ['GW', currentGW],
                           ['Deadline', curEvent?.deadline_time ? new Date(curEvent.deadline_time).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'],
                           ['Total FPL Players', totalFPL?.toLocaleString()],
-                          ['Teams', bootstrap?.teams?.length],
-                        ].map(([k,v]) => (
+                          ['Teams', bootstrap?.teams?.length]].map(([k,v]) => (
                           <div key={k} className="flex justify-between px-3 py-2 rounded-lg bg-black/20">
                             <span className="text-gray-500">{k}</span>
                             <span className="text-white font-semibold">{v ?? '—'}</span>
@@ -650,8 +671,7 @@ export default function AdminConsole() {
                           ['Models',      oracle.models_available   ? '✓ Loaded' : '✗ Missing'],
                           ['Training',    oracle.training_status ?? '—'],
                           ['GW',          oracle.current_gw ?? '—'],
-                          ['Updated',     oracle.last_updated ? new Date(oracle.last_updated).toLocaleTimeString() : '—'],
-                        ].map(([k,v]) => (
+                          ['Updated',     oracle.last_updated ? new Date(oracle.last_updated).toLocaleTimeString() : '—']].map(([k,v]) => (
                           <div key={k} className="flex justify-between px-3 py-2 rounded-lg bg-black/20">
                             <span className="text-gray-500">{k}</span>
                             <span className={v?.toString().startsWith('✗') ? 'text-red-400 font-semibold' : v?.toString().startsWith('✓') ? 'text-green-400 font-semibold' : 'text-white font-semibold'}>{v}</span>
@@ -707,8 +727,7 @@ export default function AdminConsole() {
                       { path:'/oracle/fixtures',    m:'GET',  d:'DGW/BGW fixture map' },
                       { path:'/oracle/optimise',    m:'POST', d:'Run greedy transfer solver' },
                       { path:'/oracle/train',       m:'POST', d:'Trigger ML retrain' },
-                      { path:'/oracle/cron',        m:'POST', d:'Daily cron hook' },
-                    ].map(({ path, m, d }) => (
+                      { path:'/oracle/cron',        m:'POST', d:'Daily cron hook' }].map(({ path, m, d }) => (
                       <a key={path} href={ORACLE_URL+path} target="_blank" rel="noreferrer"
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-black/20 hover:bg-white/5 transition-colors group">
                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${m==='GET'?'bg-green-500/15 text-green-400':'bg-blue-500/15 text-blue-400'}`}>{m}</span>
@@ -731,8 +750,7 @@ export default function AdminConsole() {
                       { path:'/api/differentials',  m:'GET',  d:'Differential picks' },
                       { path:'/api/essentials',     m:'GET',  d:'Essential transfers' },
                       { path:'/api/optimise',       m:'POST', d:'Legacy optimiser' },
-                      { path:'/api/train',          m:'POST', d:'Trigger retrain' },
-                    ].map(({ path, m, d }) => (
+                      { path:'/api/train',          m:'POST', d:'Trigger retrain' }].map(({ path, m, d }) => (
                       <a key={path} href={ENGINE_URL+path} target="_blank" rel="noreferrer"
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-black/20 hover:bg-white/5 transition-colors group">
                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 ${m==='GET'?'bg-green-500/15 text-green-400':'bg-blue-500/15 text-blue-400'}`}>{m}</span>
