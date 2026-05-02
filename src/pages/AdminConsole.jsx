@@ -108,7 +108,7 @@ export default function AdminConsole() {
   const allUsers    = users || []
   const freeCount   = allUsers.filter(u => !u.tier || u.tier === 'free').length
   const proCount    = allUsers.filter(u => u.tier === 'pro').length
-  const    = allUsers.filter(u => u.tier ===).length
+
 
   // signup trend: users joined in last 7 days
   const last7 = allUsers.filter(u => {
