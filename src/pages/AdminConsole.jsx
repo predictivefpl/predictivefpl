@@ -304,7 +304,7 @@ export default function AdminConsole() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Kpi label="Total Users"    value={allUsers.length || null} sub={`+${last7} this week`}  icon="fa-users"      color="#3b82f6" loading={users === null} />
                 <Kpi label="Pro Members"    value={proCount || null}  sub="Active subscriptions"         icon="fa-star"       color="#a855f7" loading={users === null} />
-                <Kpi label="Premium Members"value={ || null} sub="Top tier"                     icon="fa-crown"      color="#f59e0b" loading={users === null} />
+
                 <Kpi label="Free Users"     value={freeCount || null} sub="Conversion targets"           icon="fa-user"       color="#10b981" loading={users === null} />
               </div>
 
@@ -423,7 +423,7 @@ export default function AdminConsole() {
                       {t.charAt(0).toUpperCase() + t.slice(1)}
                       {t !== 'all' && users !== null && (
                         <span className="ml-1.5 opacity-60">
-                          {t === 'free' ? freeCount : t === 'pro' ? proCount : }
+                          {t === 'free' ? freeCount : t === 'pro' ? proCount : 0}
                         </span>
                       )}
                     </button>
@@ -564,7 +564,7 @@ export default function AdminConsole() {
                 {[
                   { tier: 'free',    icon: 'fa-user',  msg: 'Upsell to Pro — highlight Oracle AI picks and rival tracking.' },
                   { tier: 'pro',     icon: 'fa-star',  msg: 'Upsell to Premium — deeper analysis, chip timing advisor.' },
-                  { tier:, icon: 'fa-crown', msg: 'Retain — exclusive features, early GW previews.' }].map(({ tier, icon, msg }) => {
+                  ].map(({ tier, icon, msg }) => {
                   const t     = TIERS[tier]
                   const count = allUsers.filter(u => (u.tier || 'free') === tier).length
                   const emails = allUsers.filter(u => (u.tier || 'free') === tier && u.email).map(u => u.email)
