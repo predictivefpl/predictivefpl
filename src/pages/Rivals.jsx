@@ -114,7 +114,7 @@ export default function Rivals() {
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white" style={{paddingBottom: isMobile ? 60 : 0}}>
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between py-4 border-b border-gray-800/50 flex-shrink-0" style={{paddingLeft: isMobile ? 16 : 32, paddingRight: isMobile ? 16 : 32}}>
           <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function Rivals() {
 
                 {/* Standings table */}
                 {standings.length > 0 && (
-                  <div className="glass-card rounded-2xl border border-gray-700/50 overflow-hidden">
+                  <div className="glass-card rounded-2xl border border-gray-700/50" style={{overflowX:"auto"}}>
                     {!isMobile && (
                     <table className="w-full">
                       <thead>

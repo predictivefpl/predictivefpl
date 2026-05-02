@@ -12,7 +12,7 @@ function PlayerToken({ p, photoMap, selected, onClick }) {
   const imgUrl  = photo ? 'https://resources.premierleague.com/premierleague/photos/players/110x140/p' + photo + '.png' : null
   const surname = p.name.includes(' ') ? p.name.split(' ').pop() : p.name
   return (
-    <div className="flex flex-col items-center gap-1 cursor-pointer" style={{flex:1,maxWidth:110,minWidth:0,gap:3}} onClick={() => onClick && onClick(p)}>
+    <div className="flex flex-col items-center gap-1 cursor-pointer" style={{flex:1,minWidth:0,gap:3}} onClick={() => onClick && onClick(p)}>
       <div className="relative" style={{width:"clamp(38px,10vw,62px)",height:"clamp(38px,10vw,62px)"}}>
         {selected && <div className="absolute inset-0 rounded-full" style={{background:'radial-gradient(circle, '+col+'55 0%, transparent 70%)',transform:'scale(1.4)'}}/>}
         <div className="w-full h-full rounded-full overflow-hidden border-2 flex items-center justify-center"
@@ -153,9 +153,9 @@ export default function MyTeam() {
   return (
     <div className="min-h-screen bg-[#0F121D] bg-grid flex text-white" style={{paddingBottom: isMobile ? 60 : 0}}>
       <Sidebar/>
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-[60px] px-6 flex items-center justify-between border-b border-gray-800/50 bg-[#0F121D] flex-shrink-0">
-          <div className="flex items-center gap-3">
+      <div className="flex-1 flex flex-col min-h-screen">
+        <header className="px-3 md:px-6 py-3 border-b border-gray-800/50 bg-[#0F121D] flex-shrink-0" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexDirection: isMobile ? "column" : "row",gap:isMobile?8:0,minHeight: isMobile?"auto":60}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
             <div className="flex items-center gap-2 bg-[#1A1D2E] rounded-md px-3 py-1.5 border border-blue-500/30">
               <span className="text-blue-400 text-xs">GW</span>
               <span className="text-white text-sm font-semibold">{meta.gw}</span>
