@@ -11,7 +11,7 @@ const ADMIN_EMAILS = ['predictivefpl@outlook.com', 'navindhillon@gmail.com']
 
 const TIERS = {
   free:    { label: 'Free',    color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
-  pro:     { label: 'Pro',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' }, color: '#a855f7', bg: 'rgba(168,85,247,0.12)' }}
+  pro:     { label: 'Pro',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' }}
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 function Card({ children, className = '' }) {
