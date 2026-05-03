@@ -175,6 +175,123 @@ async def redeem_promo(request: Request):
             pass  # may not exist if user hasn't been synced yet - ignore
     return {"success": True}
 
+
+@app.post("/api/admin/users")
+async def admin_list_users(request: Request):
+    """Admin-only: list all users via service_role key (bypasses RLS)."""
+    body = await request.json()
+    email = (body.get("email") or "").lower()
+    if not is_admin_email(email):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    headers  = {"apikey": SUPA_KEY, "Authorization": f"Bearer {SUPA_KEY}"}
+    async with aiohttp.ClientSession() as sess:
+        url = f"{SUPA_URL}/rest/v1/users?select=id,email,name,fpl_team_id,tier,created_at,last_sign_in&order=created_at.desc&limit=1000"
+        async with sess.get(url, headers=headers) as r:
+            data = await r.json()
+            return data if isinstance(data, list) else []
+
+
+@app.post("/api/admin/set-tier")
+async def admin_set_tier(request: Request):
+    """Admin-only: change a user's tier."""
+    body = await request.json()
+    admin_email = (body.get("admin_email") or "").lower()
+    if not is_admin_email(admin_email):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+    user_id  = body.get("user_id")
+    new_tier = body.get("tier")
+    if new_tier not in ("free", "pro"):
+        return {"success": False, "error": "Invalid tier"}
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    headers  = {
+        "apikey":        SUPA_KEY,
+        "Authorization": f"Bearer {SUPA_KEY}",
+        "Content-Type":  "application/json",
+        "Prefer":        "return=minimal",
+    }
+    async with aiohttp.ClientSession() as sess:
+        url = f"{SUPA_URL}/rest/v1/users?id=eq.{user_id}"
+        async with sess.patch(url, headers=headers, json={"tier": new_tier}) as r:
+            return {"success": r.status in (200, 204)}
+
+
+@app.post("/api/admin/promos")
+async def admin_list_promos(request: Request):
+    """Admin-only: list all promo codes."""
+    body = await request.json()
+    email = (body.get("email") or "").lower()
+    if not is_admin_email(email):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    headers  = {"apikey": SUPA_KEY, "Authorization": f"Bearer {SUPA_KEY}"}
+    async with aiohttp.ClientSession() as sess:
+        url = f"{SUPA_URL}/rest/v1/promo_codes?select=*&order=created_at.desc"
+        async with sess.get(url, headers=headers) as r:
+            data = await r.json()
+            return data if isinstance(data, list) else []
+
+
+@app.post("/api/admin/promo-create")
+async def admin_create_promo(request: Request):
+    """Admin-only: create a new promo code."""
+    body = await request.json()
+    admin_email = (body.get("admin_email") or "").lower()
+    if not is_admin_email(admin_email):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+    code = (body.get("code") or "").strip().upper()
+    note = (body.get("note") or "").strip()
+    if not code:
+        return {"success": False, "error": "Code required"}
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    headers  = {
+        "apikey":        SUPA_KEY,
+        "Authorization": f"Bearer {SUPA_KEY}",
+        "Content-Type":  "application/json",
+        "Prefer":        "return=representation",
+    }
+    payload = {"code": code, "note": note or "Beta tester", "redeemed": False}
+    async with aiohttp.ClientSession() as sess:
+        url = f"{SUPA_URL}/rest/v1/promo_codes"
+        async with sess.post(url, headers=headers, json=payload) as r:
+            if r.status in (200, 201):
+                return {"success": True}
+            err = await r.text()
+            return {"success": False, "error": err}
+
+
+@app.post("/api/admin/promo-delete")
+async def admin_delete_promo(request: Request):
+    """Admin-only: delete a promo code."""
+    body = await request.json()
+    admin_email = (body.get("admin_email") or "").lower()
+    if not is_admin_email(admin_email):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Admin only")
+    promo_id = body.get("id")
+    if not promo_id:
+        return {"success": False}
+    import aiohttp
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    headers  = {"apikey": SUPA_KEY, "Authorization": f"Bearer {SUPA_KEY}"}
+    async with aiohttp.ClientSession() as sess:
+        url = f"{SUPA_URL}/rest/v1/promo_codes?id=eq.{promo_id}"
+        async with sess.delete(url, headers=headers) as r:
+            return {"success": r.status in (200, 204)}
+
 @app.post("/api/me/tier")
 async def my_tier(request: Request):
     """Authoritative tier lookup. Frontend should call THIS instead of Supabase directly."""

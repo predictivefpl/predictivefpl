@@ -73,15 +73,17 @@ export default function AdminConsole() {
   const fetchUsers = useCallback(async () => {
     setB('users', true)
     try {
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/users?select=id,email,name,fpl_team_id,tier,created_at,last_sign_in&order=created_at.desc&limit=1000`,
-        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-      )
+      const adminEmail = user?.primaryEmailAddress?.emailAddress
+      const r = await fetch(`${ORACLE_URL}/api/admin/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: adminEmail }),
+      })
       const d = await r.json()
       setUsers(Array.isArray(d) ? d : [])
     } catch { setUsers([]) }
     setB('users', false)
-  }, [])
+  }, [user])
 
   useEffect(() => {
     if (!isAdmin) { navigate('/dashboard'); return }
@@ -126,10 +128,12 @@ export default function AdminConsole() {
   const fetchPromos = async () => {
     setPromoLoading(true)
     try {
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/promo_codes?select=*&order=created_at.desc`,
-        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-      )
+      const adminEmail = user?.primaryEmailAddress?.emailAddress
+      const r = await fetch(`${ORACLE_URL}/api/admin/promos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: adminEmail }),
+      })
       const d = await r.json()
       setPromos(Array.isArray(d) ? d : [])
     } catch { setPromos([]) }
@@ -140,35 +144,28 @@ export default function AdminConsole() {
     if (!newCode.trim()) return
     setPromoMsg('')
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/promo_codes`, {
+      const adminEmail = user?.primaryEmailAddress?.emailAddress
+      const r = await fetch(`${ORACLE_URL}/api/admin/promo-create`, {
         method: 'POST',
-        headers: {
-          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json', Prefer: 'return=representation'
-        },
-        body: JSON.stringify({
-          code: newCode.trim().toUpperCase(),
-          note: newNote.trim() || 'Beta tester',
-          redeemed: false,
-          created_at: new Date().toISOString()
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_email: adminEmail, code: newCode.trim(), note: newNote.trim() }),
       })
-      if (r.ok) {
+      const d = await r.json()
+      if (d.success) {
         setPromoMsg('✓ Code created')
         setNewCode(''); setNewNote('')
         fetchPromos()
-      } else {
-        const e = await r.json()
-        setPromoMsg('Error: ' + (e.message || e.code || 'Failed'))
-      }
+      } else { setPromoMsg('Error: ' + (d.error || 'Failed')) }
     } catch (e) { setPromoMsg('Error: ' + e.message) }
     setTimeout(() => setPromoMsg(''), 3000)
   }
 
   const deletePromo = async (id) => {
-    await fetch(`${SUPABASE_URL}/rest/v1/promo_codes?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    const adminEmail = user?.primaryEmailAddress?.emailAddress
+    await fetch(`${ORACLE_URL}/api/admin/promo-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admin_email: adminEmail, id }),
     })
     fetchPromos()
   }
@@ -176,13 +173,11 @@ export default function AdminConsole() {
   const setUserTier = async (userId, newTier, userEmail) => {
     if (!confirm(`Set ${userEmail} to "${newTier}"?`)) return
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-        method: 'PATCH',
-        headers: {
-          apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json', Prefer: 'return=minimal'
-        },
-        body: JSON.stringify({ tier: newTier })
+      const adminEmail = user?.primaryEmailAddress?.emailAddress
+      await fetch(`${ORACLE_URL}/api/admin/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_email: adminEmail, user_id: userId, tier: newTier }),
       })
       fetchUsers()
     } catch (e) { alert('Error: ' + e.message) }
