@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Request, BackgroundTasks
 from api.stripe_handler import create_checkout_session, stripe_webhook
+from api.security import get_user_tier_server, is_admin_email, rate_limit
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -30,7 +31,7 @@ import aiohttp
 
 app = FastAPI(title="Oracle FPL Engine", version="2.0.0")
 app.add_middleware(CORSMiddleware,
-    allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+    allow_origins=["https://predictivefpl.com", "https://www.predictivefpl.com", "https://predictivefpl.vercel.app", "http://localhost:5173"], allow_methods=["*"], allow_headers=["*"],
     allow_credentials=True)
 
 CACHE_DIR  = Path(__file__).parent.parent / "cache"
@@ -119,6 +120,70 @@ class OptimiseReq(BaseModel):
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
+
+
+
+@app.post("/api/promo/redeem")
+async def redeem_promo(request: Request):
+    """Server-side promo code validation - prevents client-side abuse."""
+    import aiohttp
+    # Rate limit
+    ip = request.client.host if hasattr(request, 'client') and request.client else 'unknown'
+    if not rate_limit(ip, max_per_min=5):
+        return {"success": False, "error": "Too many attempts - please wait"}
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    code  = (body.get("code") or "").strip().upper()
+    if not email or not code:
+        return {"success": False, "error": "Email and code required"}
+    SUPA_URL = os.environ.get("SUPABASE_URL", "")
+    SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not SUPA_KEY:
+        return {"success": False, "error": "Server configuration error"}
+    headers = {
+        "apikey":        SUPA_KEY,
+        "Authorization": f"Bearer {SUPA_KEY}",
+        "Content-Type":  "application/json",
+    }
+    async with aiohttp.ClientSession() as sess:
+        # 1. Find unredeemed code
+        url = f"{SUPA_URL}/rest/v1/promo_codes?code=eq.{code}&redeemed=eq.false&select=id"
+        async with sess.get(url, headers=headers) as r:
+            codes = await r.json()
+        if not isinstance(codes, list) or len(codes) == 0:
+            return {"success": False, "error": "Invalid or already used code"}
+        code_id = codes[0]["id"]
+        # 2. Mark as redeemed
+        patch_headers = {**headers, "Prefer": "return=minimal"}
+        async with sess.patch(
+            f"{SUPA_URL}/rest/v1/promo_codes?id=eq.{code_id}",
+            headers=patch_headers,
+            json={
+                "redeemed":    True,
+                "redeemed_by": email,
+                "redeemed_at": datetime.utcnow().isoformat() + "Z",
+            }
+        ) as r:
+            if r.status not in (200, 204):
+                return {"success": False, "error": "Failed to redeem"}
+        # 3. Upgrade user tier to pro
+        async with sess.patch(
+            f"{SUPA_URL}/rest/v1/users?email=eq.{email}",
+            headers=patch_headers,
+            json={"tier": "pro"}
+        ) as r:
+            pass  # may not exist if user hasn't been synced yet - ignore
+    return {"success": True}
+
+@app.post("/api/me/tier")
+async def my_tier(request: Request):
+    """Authoritative tier lookup. Frontend should call THIS instead of Supabase directly."""
+    body = await request.json()
+    email = body.get("email", "")
+    if not email:
+        return {"tier": "free", "is_admin": False}
+    tier = await get_user_tier_server(email)
+    return {"tier": tier, "is_admin": is_admin_email(email)}
 
 @app.post("/stripe/checkout")
 async def checkout(request: Request):

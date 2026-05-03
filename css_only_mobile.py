@@ -1,0 +1,177 @@
+import re, os
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Add a global mobile.css with hard CSS overrides for table -> cards transform
+# This works at the BROWSER level, no JS detection needed
+# ══════════════════════════════════════════════════════════════════════════════
+
+mobile_css = """
+/* ═══════════════════════════════════════════════════════════════════════════
+   PredictiveFPL Mobile CSS — hard overrides, browser-native @media queries
+   No JS, no React state — works on every device
+═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+
+  /* ─── Hide desktop sidebar always on mobile ─── */
+  aside.desktop-sidebar { display: none !important; }
+  aside[class*="hidden md:flex"] { display: none !important; }
+
+  /* ─── Show mobile bottom nav ─── */
+  .mobile-bottom-nav { display: flex !important; }
+
+  /* ─── Bottom nav clearance for content ─── */
+  .min-h-screen { padding-bottom: 70px !important; }
+
+  /* ─── Reduce page padding ─── */
+  .p-8, .p-6 { padding: 0.75rem !important; }
+  .px-8, .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .py-8, .py-6 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+
+  /* ─── Make all wide grids collapse to fewer columns ─── */
+  .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid.grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid.lg\\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* ─── RIVALS: make the standings table behave on mobile ─── */
+  .glass-card table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+  .glass-card table thead {
+    display: none !important;
+  }
+  .glass-card table tbody, .glass-card table tr {
+    display: block !important;
+    width: 100% !important;
+  }
+  .glass-card table tr {
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
+    padding: 10px !important;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  .glass-card table td {
+    display: inline-block !important;
+    padding: 4px 8px !important;
+    border: none !important;
+    text-align: left !important;
+    font-size: 12px !important;
+  }
+  .glass-card table td:first-child {
+    font-weight: 700;
+    font-size: 14px !important;
+    margin-right: 8px !important;
+  }
+
+  /* ─── MyTeam pitch: scale player avatars + token spacing ─── */
+  /* Avatar containers (60-62 px hardcoded) */
+  div[style*="width:62,height:62"],
+  div[style*="width:60,height:60"],
+  div[style*="width: 60, height: 60"],
+  div[style*="width: 62, height: 62"] {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* PlayerToken outer minWidth */
+  div[style*="minWidth:68"],
+  div[style*="minWidth: 68"] {
+    min-width: 0 !important;
+    flex: 1 !important;
+    max-width: 80px !important;
+  }
+
+  /* Pitch min-height squish fix - use aspect-ratio for proper scaling */
+  div[style*="minHeight:'520px'"],
+  div[style*='minHeight:"520px"'],
+  div[style*="minHeight:520"],
+  div[style*="minHeight: '520px'"] {
+    min-height: 0 !important;
+    aspect-ratio: 400 / 580 !important;
+  }
+
+  /* Player name text - scale down */
+  .player-token-name,
+  span[class*="text-[10px]"][class*="text-white"],
+  span[class*="text-[11px]"][class*="text-white"] {
+    font-size: 9px !important;
+  }
+
+  /* xP badges */
+  span[class*="text-[9px]"][class*="font-black"] {
+    font-size: 8px !important;
+    padding: 2px 4px !important;
+  }
+
+  /* Header bars - allow wrapping */
+  header.h-\\[60px\\] {
+    height: auto !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    min-height: 60px;
+  }
+
+  /* All flex containers with gap-3 inside headers - allow wrap */
+  header div[class*="flex items-center gap-3"] {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Small text on stat boxes */
+  .bg-\\[\\#1A1D2E\\] { font-size: 11px !important; padding: 4px 8px !important; }
+  .bg-\\[\\#1A1D2E\\] > span { font-size: 11px !important; }
+
+  /* Reduce text sizes globally */
+  .text-4xl { font-size: 1.75rem !important; }
+  .text-3xl { font-size: 1.5rem !important; }
+  .text-2xl { font-size: 1.25rem !important; }
+
+  /* Modal/popup adjustments - bottom sheet */
+  .oracle-popup-backdrop { align-items: flex-end !important; }
+  .oracle-popup-modal {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92dvh !important;
+    width: 100% !important;
+    margin: 0 !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* iOS safe area for bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 767px) {
+    .mobile-bottom-nav,
+    nav[style*="bottom:0"],
+    nav[style*="bottom: 0"] {
+      padding-bottom: env(safe-area-inset-bottom) !important;
+      height: calc(60px + env(safe-area-inset-bottom)) !important;
+    }
+    .min-h-screen {
+      padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    }
+  }
+}
+"""
+
+with open('src/mobile.css', 'w', encoding='utf-8') as f:
+    f.write(mobile_css)
+print('src/mobile.css written')
+
+# Ensure it's imported in main entry
+for path in ['src/main.jsx', 'src/main.tsx', 'src/main.js']:
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            m = f.read()
+        if 'mobile.css' not in m:
+            m = "import './mobile.css'\n" + m
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(m)
+            print(f'{path}: import added')
+        else:
+            print(f'{path}: import already present')
+        break
+print('Done')
