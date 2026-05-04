@@ -621,6 +621,100 @@ export default function AdminConsole() {
           {/* ══════════════════════════════════════════════════════════════
               SYSTEMS TAB
           ══════════════════════════════════════════════════════════════ */}
+          {tab === 'promos' && (
+            <div className="space-y-5">
+              <Card className="p-6">
+                <h3 className="text-sm font-bold text-gray-300 mb-5 flex items-center gap-2">
+                  <i className="fa-solid fa-ticket text-purple-400 text-xs"/> Create Promo Code
+                </h3>
+                <div className="flex gap-3 flex-wrap items-end">
+                  <div className="flex-1 min-w-48">
+                    <label className="text-xs text-gray-500 block mb-1.5">Code</label>
+                    <input type="text" value={newCode} onChange={e => setNewCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. FRIEND2024"
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-purple-500/50 placeholder-gray-600"/>
+                  </div>
+                  <div className="flex-1 min-w-48">
+                    <label className="text-xs text-gray-500 block mb-1.5">Note</label>
+                    <input type="text" value={newNote} onChange={e => setNewNote(e.target.value)}
+                      placeholder="e.g. John - beta tester"
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder-gray-600"/>
+                  </div>
+                  <button onClick={createPromo} disabled={!newCode.trim()}
+                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 flex-shrink-0"
+                    style={{background:'linear-gradient(135deg,#a855f7,#3b82f6)'}}>
+                    Create Code
+                  </button>
+                </div>
+                {promoMsg && (
+                  <p className={`text-xs mt-3 font-semibold ${promoMsg.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
+                    {promoMsg}
+                  </p>
+                )}
+                <p className="text-xs text-gray-600 mt-3">
+                  Users redeem the code on their Account Settings page to unlock Pro instantly.
+                </p>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-300">Active Codes</p>
+                  <button onClick={fetchPromos} className="text-xs text-gray-500 hover:text-white transition-colors">
+                    <i className="fa-solid fa-rotate mr-1 text-[10px]"/>Refresh
+                  </button>
+                </div>
+                {promoLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <i className="fa-solid fa-spinner fa-spin text-gray-600"/>
+                  </div>
+                ) : promos.length === 0 ? (
+                  <div className="px-5 py-10 text-center text-gray-600 text-sm">
+                    No promo codes yet. Create one above.
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-white/[0.06]">
+                      <tr className="text-[11px] text-gray-500 uppercase tracking-wider">
+                        {['Code','Note','Status','Created',''].map(h => (
+                          <th key={h} className="px-5 py-3 text-left font-semibold">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {promos.map((p, i) => (
+                        <tr key={p.id || i} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                          <td className="px-5 py-3">
+                            <code className="text-sm font-black text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded">{p.code}</code>
+                          </td>
+                          <td className="px-5 py-3 text-gray-400 text-xs">{p.note || '—'}</td>
+                          <td className="px-5 py-3">
+                            {p.redeemed
+                              ? <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20">
+                                  Redeemed{p.redeemed_by ? ` by ${p.redeemed_by}` : ''}
+                                </span>
+                              : <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                  Active
+                                </span>
+                            }
+                          </td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'2-digit'}) : '—'}
+                          </td>
+                          <td className="px-5 py-3">
+                            <button onClick={() => deletePromo(p.id)}
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg border border-red-500/20 text-red-500/60 hover:text-red-400 hover:border-red-500/40 transition-all">
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Card>
+            </div>
+          )}
+
           {tab === 'systems' && (
             <div className="space-y-6">
 
