@@ -237,6 +237,7 @@ export default function AdminConsole() {
   const TABS = [
     { id: 'overview',    label: 'Overview',     icon: 'fa-chart-pie' },
     { id: 'users',       label: 'Users',        icon: 'fa-users' },
+    { id: 'promos',      label: 'Promo Codes',  icon: 'fa-ticket' },
     { id: 'marketing',   label: 'Marketing',    icon: 'fa-envelope' },
     { id: 'systems',     label: 'Systems',      icon: 'fa-server' }]
 
