@@ -53,6 +53,11 @@ export default function AdminConsole() {
   const [tierFilter,setTierFilter]= useState('all')
   const [busy,      setBusy]      = useState({})
   const [syncTime,  setSyncTime]  = useState(null)
+  const [newCode,    setNewCode]    = useState('')
+  const [newNote,    setNewNote]    = useState('')
+  const [promoMsg,   setPromoMsg]   = useState('')
+  const [promos,     setPromos]     = useState([])
+  const [promoLoading, setPromoLoading] = useState(false)
   const [emailDraft,setEmailDraft]= useState({ subject:'', body:'' })
   const [emailSent, setEmailSent] = useState(false)
 
